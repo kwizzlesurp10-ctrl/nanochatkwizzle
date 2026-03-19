@@ -5,7 +5,7 @@
 
 nanochat is the simplest experimental harness for training LLMs. It is designed to run on a single GPU node, the code is minimal/hackable, and it covers all major LLM stages including tokenization, pretraining, finetuning, evaluation, inference, and a chat UI. For example, you can train your own GPT-2 capability LLM (which cost ~$43,000 to train in 2019) for only $48 (~2 hours of 8XH100 GPU node) and then talk to it in a familiar ChatGPT-like web UI. On a spot instance, the total cost can be closer to ~$15. More generally, nanochat is configured out of the box to train an entire miniseries of compute-optimal models by setting one single complexity dial: `--depth`, the number of layers in the GPT transformer model (GPT-2 capability happens to be approximately depth 26). All other hyperparameters (the width of the transformer, number of heads, learning rate adjustments, training horizons, weight decays, ...) are calculated automatically in an optimal way.
 
-For questions about the repo, I recommend either using [DeepWiki](https://deepwiki.com/karpathy/nanochat) from Devin/Cognition to ask questions about the repo, or use the [Discussions tab](https://github.com/karpathy/nanochat/discussions), or come by the [#nanochat](https://discord.com/channels/1020383067459821711/1427295580895314031) channel on Discord.
+**This fork:** [kwizzlesurp10-ctrl/nanochatkwizzle](https://github.com/kwizzlesurp10-ctrl/nanochatkwizzle) — use it for clone URLs, issues, and PRs on this line of work. Upstream baseline: [karpathy/nanochat](https://github.com/karpathy/nanochat). For general nanochat Q&A, [DeepWiki](https://deepwiki.com/karpathy/nanochat), the upstream [Discussions](https://github.com/karpathy/nanochat/discussions), or [#nanochat on Discord](https://discord.com/channels/1020383067459821711/1427295580895314031) are still the best community venues.
 
 ## Time-to-GPT-2 Leaderboard
 
@@ -44,6 +44,52 @@ python -m scripts.chat_web
 ```
 
 And then visit the URL shown. Make sure to access it correctly, e.g. on Lambda use the public IP of the node you're on, followed by the port, so for example [http://209.20.xxx.xxx:8000/](http://209.20.xxx.xxx:8000/), etc. Then talk to your LLM as you'd normally talk to ChatGPT! Get it to write stories or poems. Ask it to tell you who you are to see a hallucination. Ask it why the sky is blue. Or why it's green. The speedrun is a 4e19 FLOPs capability model so it's a bit like talking to a kindergartener :).
+
+### Nanobot (current model training)
+
+Pipeline: **Pretrain (base) → SFT (chat) → serve**. [runs/nanobot.sh](runs/nanobot.sh) runs pretrain + SFT; when it finishes you get SFT checkpoints you can serve. Checkpoints use model-tag `nanobot` (separate from speedrun). Same hardware and rough duration as speedrun (~3 hr on 8×H100).
+
+```bash
+bash runs/nanobot.sh
+```
+
+Serve the nanobot SFT checkpoint:
+
+```bash
+python -m scripts.chat_web --model-tag nanobot
+```
+
+**If the model outputs gibberish or special tokens** (e.g. `<|python_start|>`): you are likely serving a pretrain-only checkpoint. Use an SFT checkpoint (e.g. from a completed `runs/speedrun.sh` or `runs/nanobot.sh`) and pass the correct `--model-tag` and `--source sft`. Generation now stops when the model emits tool/code tokens so less garbage is streamed.
+
+**RAG (`--rag`)** uses Ollama embeddings (`ollama pull nomic-embed-text`). You can use a plain-text corpus (`--rag-corpus FILE`) or a Chroma persist directory (`--rag-db`).
+
+**Why `uv add chromadb` fails on Python 3.10:** current `chromadb` pulls `onnxruntime`, which only ships wheels for **cp311+**, not cp310. Workarounds:
+
+1. **Stay on 3.10 — no Chroma:** run with `--rag --rag-corpus /path/to.txt` (or rely on `dev/rag_sample_corpus.txt` for a quick test). No `chromadb` install needed.
+2. **Use Chroma:** move the project venv to **Python 3.11+** (e.g. `uv python install 3.12`, recreate `.venv`, `uv sync --extra gpu`), then `uv add chromadb` and point `--rag-db` at your Chroma folder.
+
+### Weights & Biases (entity / project)
+
+Training scripts (`base_train`, `chat_sft`, `chat_rl`) log to wandb with default projects `nanochat`, `nanochat-sft`, and `nanochat-rl`. Send runs to a team or custom project with env vars or flags:
+
+```bash
+export WANDB_ENTITY=kwizzlesurp10-sevtech   # optional; else your login default
+export WANDB_PROJECT=nanochat-sft            # optional for SFT; overrides default project name
+torchrun ... -m scripts.chat_sft -- --run=my-run
+# or per-invocation:
+torchrun ... -m scripts.chat_sft -- --run=my-run --wandb-entity=kwizzlesurp10-sevtech --wandb-project=nanochat-sft
+```
+
+Patch an existing run’s config via the public API (`run_id` is the id in the run URL):
+
+```python
+import wandb
+
+api = wandb.Api()
+run = api.run("kwizzlesurp10-sevtech/nanochat-sft/<run_id>")
+run.config["key"] = updated_value
+run.update()
+```
 
 ---
 
@@ -147,6 +193,7 @@ I've published a number of guides that might contain helpful information, most r
 ├── pyproject.toml
 ├── runs
 │   ├── miniseries.sh               # Miniseries training script
+│   ├── nanobot.sh                  # Pretrain + SFT (model-tag nanobot), then serve
 │   ├── runcpu.sh                   # Small example of how to run on CPU/MPS
 │   ├── scaling_laws.sh             # Scaling laws experiments
 │   └── speedrun.sh                 # Train the ~$100 nanochat d20
@@ -199,7 +246,7 @@ If you find nanochat helpful in your research cite simply as:
   title = {nanochat: The best ChatGPT that \$100 can buy},
   year = {2025},
   publisher = {GitHub},
-  url = {https://github.com/karpathy/nanochat}
+  url = {https://github.com/kwizzlesurp10-ctrl/nanochatkwizzle}
 }
 ```
 

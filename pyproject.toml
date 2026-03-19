@@ -4,6 +4,11 @@ version = "0.1.0"
 description = "the minimal full-stack ChatGPT clone"
 readme = "README.md"
 requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/kwizzlesurp10-ctrl/nanochatkwizzle"
+Repository = "https://github.com/kwizzlesurp10-ctrl/nanochatkwizzle"
+Upstream = "https://github.com/karpathy/nanochat"
 dependencies = [
     "datasets>=4.0.0",
     "fastapi>=0.117.1",
@@ -32,6 +37,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
@@ -63,6 +69,9 @@ cpu = [
 ]
 gpu = [
     "torch==2.9.1",
+]
+rag = [
+    "chromadb>=1.0.0",
 ]
 
 [tool.uv]

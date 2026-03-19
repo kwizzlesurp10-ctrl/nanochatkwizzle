@@ -1,0 +1,3 @@
+NanoChat is a small training stack for chat models: pretrain a base LM, then SFT for chat, then serve via the web UI.
+
+For RAG, point --rag-corpus at your own plain-text export, or use a Chroma persist directory with chromadb installed (Python 3.11+). Ollama must run an embedding model such as nomic-embed-text.
