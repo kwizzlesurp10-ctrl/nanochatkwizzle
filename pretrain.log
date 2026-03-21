@@ -1,0 +1,45 @@
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+WARNING: SDPA has no support for sliding window attention (window_pattern='SSSL'). Your GPU utilization will be terrible.
+WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 128,265
+Padding vocab_size from 128265 to 128320 for efficiency
+Model config:
+{
+  "sequence_len": 512,
+  "vocab_size": 128265,
+  "n_layer": 4,
+  "n_head": 1,
+  "n_kv_head": 1,
+  "n_embd": 128,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "SSSL"
+}
+Parameter counts:
+wte                     : 16,424,960
+value_embeds            : 32,849,920
+lm_head                 : 16,424,960
+transformer_matrices    : 786,456
+scalars                 : 34
+total                   : 66,486,330
+Estimated FLOPs per token: 1.046448e+08
+Padding vocab_size from 128265 to 128320 for efficiency
+Scaling LRs by 0.0312 for batch size 512 (reference: 524,288)
+Scaling weight decay from 0.100000 to 0.012802 for depth 4
+Scaling the LR for the AdamW parameters ∝1/√(128/768) = 2.449490
+Using user-provided number of iterations: 2,000
+Total number of training tokens: 1,024,000
+Tokens : Scaling params ratio: 0.06
+Total training FLOPs estimate: 1.071562e+14
+Tokens / micro-batch / rank: 1 x 512 = 512
+Tokens / micro-batch: 512
+Total batch size 512 => gradient accumulation steps: 1

@@ -1,0 +1,612 @@
+wandb: Starting wandb agent 🕵️
+2026-03-19 09:31:05,269 - wandb.wandb_agent - INFO - Running runs: []
+2026-03-19 09:31:06,971 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:31:06,972 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 59
+	core_metric_every: 1375
+	core_metric_max_per_task: 616
+	depth: 26
+	device_batch_size: 51
+	device_type: 
+	embedding_lr: 0.47706184548067554
+	eval_every: 339
+	eval_tokens: 72906469
+	final_lr_frac: 0.040938240058723624
+	fp8: false
+	fp8_recipe: tensorwise
+	head_dim: 233
+	matrix_lr: 0.03414791354882461
+	max_seq_len: 3413
+	num_iterations: -2
+	resume_from_step: -1
+	run: nanobot-d16
+	sample_every: 3511
+	save_every: -1
+	scalar_lr: 0.5871756894216174
+	target_flops: -1
+	target_param_data_ratio: 11.825569915570318
+	total_batch_size: 0
+	unembedding_lr: 0.015233356906472009
+	warmdown_ratio: 1.0830994335165334
+	warmup_steps: 25
+	weight_decay: 0.43425896352599
+	window_pattern: SSSL
+2026-03-19 09:31:06,973 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=59 --core_metric_every=1375 --core_metric_max_per_task=616 --depth=26 --device_batch_size=51 --device_type= --embedding_lr=0.47706184548067554 --eval_every=339 --eval_tokens=72906469 --final_lr_frac=0.040938240058723624 --fp8=false --fp8_recipe=tensorwise --head_dim=233 --matrix_lr=0.03414791354882461 --max_seq_len=3413 --num_iterations=-2 --resume_from_step=-1 --run=nanobot-d16 --sample_every=3511 --save_every=-1 --scalar_lr=0.5871756894216174 --target_flops=-1 --target_param_data_ratio=11.825569915570318 --total_batch_size=0 --unembedding_lr=0.015233356906472009 --warmdown_ratio=1.0830994335165334 --warmup_steps=25 --weight_decay=0.43425896352599 --window_pattern=SSSL
+DEBUG: Raw args: ['--aspect_ratio=59', '--core_metric_every=1375', '--core_metric_max_per_task=616', '--depth=26', '--device_batch_size=51', '--device_type=', '--embedding_lr=0.47706184548067554', '--eval_every=339', '--eval_tokens=72906469', '--final_lr_frac=0.040938240058723624', '--fp8=false', '--fp8_recipe=tensorwise', '--head_dim=233', '--matrix_lr=0.03414791354882461', '--max_seq_len=3413', '--num_iterations=-2', '--resume_from_step=-1', '--run=nanobot-d16', '--sample_every=3511', '--save_every=-1', '--scalar_lr=0.5871756894216174', '--target_flops=-1', '--target_param_data_ratio=11.825569915570318', '--total_batch_size=0', '--unembedding_lr=0.015233356906472009', '--warmdown_ratio=1.0830994335165334', '--warmup_steps=25', '--weight_decay=0.43425896352599', '--window_pattern=SSSL']
+DEBUG: Processed args: ['--aspect-ratio=59', '--core-metric-every=1375', '--core-metric-max-per-task=616', '--depth=26', '--device-batch-size=51', '--device-type=', '--embedding-lr=0.47706184548067554', '--eval-every=339', '--eval-tokens=72906469', '--final-lr-frac=0.040938240058723624', '--fp8-recipe=tensorwise', '--head-dim=233', '--matrix-lr=0.03414791354882461', '--max-seq-len=3413', '--num-iterations=-2', '--resume-from-step=-1', '--run=nanobot-d16', '--sample-every=3511', '--save-every=-1', '--scalar-lr=0.5871756894216174', '--target-flops=-1', '--target-param-data-ratio=11.825569915570318', '--total-batch-size=0', '--unembedding-lr=0.015233356906472009', '--warmdown-ratio=1.0830994335165334', '--warmup-steps=25', '--weight-decay=0.43425896352599', '--window-pattern=SSSL']
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.
+wandb: Currently logged in as: kwizzlesurp10 (kwizzlesurp10-sevtech) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: WARNING Ignoring project 'nanochat' when running a sweep.
+wandb: WARNING Ignoring entity 'kwizzlesurp10-sevtech' when running a sweep.
+wandb: WARNING Using a boolean value for 'reinit' is deprecated. Use 'return_previous' or 'finish_previous' instead.
+wandb: setting up run sb46wqq7
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /home/keef/nanochatkwizzle/wandb/run-20260319_093109-sb46wqq7
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run nanobot-d16
+wandb: ⭐️ View project at https://wandb.ai/kwizzlesurp10-sevtech/nanochat
+wandb: 🧹 View sweep at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/sweeps/lvnau81m
+wandb: 🚀 View run at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/sb46wqq7
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+WARNING: SDPA has no support for sliding window attention (window_pattern='SSSL'). Your GPU utilization will be terrible.
+WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 128,265
+Padding vocab_size from 128265 to 128320 for efficiency
+Model config:
+{
+  "sequence_len": 3413,
+  "vocab_size": 128265,
+  "n_layer": 26,
+  "n_head": 7,
+  "n_kv_head": 7,
+  "n_embd": 1631,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "SSSL"
+}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/keef/nanochatkwizzle/scripts/base_train.py", line 171, in <module>
+    model.to_empty(device=device) # 2) All tensors get storage on target device but with uninitialized (garbage) data
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1233, in to_empty
+    return self._apply(
+           ~~~~~~~~~~~^
+        lambda t: torch.empty_like(t, device=device), recurse=recurse
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 964, in _apply
+    param_applied = fn(param)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1234, in <lambda>
+    lambda t: torch.empty_like(t, device=device), recurse=recurse
+              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_prims_common/wrappers.py", line 315, in _fn
+    result = fn(*args, **kwargs)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_refs/__init__.py", line 5209, in empty_like
+    return torch.empty_permuted(
+           ~~~~~~~~~~~~~~~~~~~~^
+        a.shape,
+        ^^^^^^^^
+    ...<5 lines>...
+        requires_grad=requires_grad,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 800.00 MiB. GPU 0 has a total capacity of 5.61 GiB of which 148.81 MiB is free. Including non-PyTorch memory, this process has 4.74 GiB memory in use. Of the allocated memory 4.65 GiB is allocated by PyTorch, and 18.61 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+2026-03-19 09:31:11,982 - wandb.wandb_agent - INFO - Running runs: ['sb46wqq7']
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mnanobot-d16[0m at: [34mhttps://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/sb46wqq7[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20260319_093109-sb46wqq7/logs[0m
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 49, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-u', '-m', 'scripts.base_train', '--aspect-ratio=59', '--core-metric-every=1375', '--core-metric-max-per-task=616', '--depth=26', '--device-batch-size=51', '--device-type=', '--embedding-lr=0.47706184548067554', '--eval-every=339', '--eval-tokens=72906469', '--final-lr-frac=0.040938240058723624', '--fp8-recipe=tensorwise', '--head-dim=233', '--matrix-lr=0.03414791354882461', '--max-seq-len=3413', '--num-iterations=-2', '--resume-from-step=-1', '--run=nanobot-d16', '--sample-every=3511', '--save-every=-1', '--scalar-lr=0.5871756894216174', '--target-flops=-1', '--target-param-data-ratio=11.825569915570318', '--total-batch-size=0', '--unembedding-lr=0.015233356906472009', '--warmdown-ratio=1.0830994335165334', '--warmup-steps=25', '--weight-decay=0.43425896352599', '--window-pattern=SSSL']' returned non-zero exit status 1.
+2026-03-19 09:31:38,143 - wandb.wandb_agent - INFO - Cleaning up finished run: sb46wqq7
+2026-03-19 09:31:40,304 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:31:40,304 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 118
+	core_metric_every: 2802
+	core_metric_max_per_task: 369
+	depth: 27
+	device_batch_size: 64
+	device_type: 
+	embedding_lr: 0.24852140730154287
+	eval_every: 420
+	eval_tokens: 61850322
+	final_lr_frac: 0.07185415691223981
+	fp8: true
+	fp8_recipe: tensorwise
+	head_dim: 223
+	matrix_lr: 0.03891581225727495
+	max_seq_len: 3048
+	num_iterations: -2
+	resume_from_step: -1
+	run: nanobot-d16
+	sample_every: 2827
+	save_every: -1
+	scalar_lr: 0.7145604520895946
+	target_flops: -2
+	target_param_data_ratio: 15.180712101158832
+	total_batch_size: 0
+	unembedding_lr: 0.00516897032059851
+	warmdown_ratio: 0.8953556814578341
+	warmup_steps: 49
+	weight_decay: 0.43020900472351514
+	window_pattern: SSSL
+2026-03-19 09:31:40,306 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=118 --core_metric_every=2802 --core_metric_max_per_task=369 --depth=27 --device_batch_size=64 --device_type= --embedding_lr=0.24852140730154287 --eval_every=420 --eval_tokens=61850322 --final_lr_frac=0.07185415691223981 --fp8=true --fp8_recipe=tensorwise --head_dim=223 --matrix_lr=0.03891581225727495 --max_seq_len=3048 --num_iterations=-2 --resume_from_step=-1 --run=nanobot-d16 --sample_every=2827 --save_every=-1 --scalar_lr=0.7145604520895946 --target_flops=-2 --target_param_data_ratio=15.180712101158832 --total_batch_size=0 --unembedding_lr=0.00516897032059851 --warmdown_ratio=0.8953556814578341 --warmup_steps=49 --weight_decay=0.43020900472351514 --window_pattern=SSSL
+DEBUG: Raw args: ['--aspect_ratio=118', '--core_metric_every=2802', '--core_metric_max_per_task=369', '--depth=27', '--device_batch_size=64', '--device_type=', '--embedding_lr=0.24852140730154287', '--eval_every=420', '--eval_tokens=61850322', '--final_lr_frac=0.07185415691223981', '--fp8=true', '--fp8_recipe=tensorwise', '--head_dim=223', '--matrix_lr=0.03891581225727495', '--max_seq_len=3048', '--num_iterations=-2', '--resume_from_step=-1', '--run=nanobot-d16', '--sample_every=2827', '--save_every=-1', '--scalar_lr=0.7145604520895946', '--target_flops=-2', '--target_param_data_ratio=15.180712101158832', '--total_batch_size=0', '--unembedding_lr=0.00516897032059851', '--warmdown_ratio=0.8953556814578341', '--warmup_steps=49', '--weight_decay=0.43020900472351514', '--window_pattern=SSSL']
+DEBUG: Processed args: ['--aspect-ratio=118', '--core-metric-every=2802', '--core-metric-max-per-task=369', '--depth=27', '--device-batch-size=64', '--device-type=', '--embedding-lr=0.24852140730154287', '--eval-every=420', '--eval-tokens=61850322', '--final-lr-frac=0.07185415691223981', '--fp8', '--fp8-recipe=tensorwise', '--head-dim=223', '--matrix-lr=0.03891581225727495', '--max-seq-len=3048', '--num-iterations=-2', '--resume-from-step=-1', '--run=nanobot-d16', '--sample-every=2827', '--save-every=-1', '--scalar-lr=0.7145604520895946', '--target-flops=-2', '--target-param-data-ratio=15.180712101158832', '--total-batch-size=0', '--unembedding-lr=0.00516897032059851', '--warmdown-ratio=0.8953556814578341', '--warmup-steps=49', '--weight-decay=0.43020900472351514', '--window-pattern=SSSL']
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.
+wandb: Currently logged in as: kwizzlesurp10 (kwizzlesurp10-sevtech) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: WARNING Ignoring project 'nanochat' when running a sweep.
+wandb: WARNING Ignoring entity 'kwizzlesurp10-sevtech' when running a sweep.
+wandb: WARNING Using a boolean value for 'reinit' is deprecated. Use 'return_previous' or 'finish_previous' instead.
+wandb: setting up run 246sz0mq
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /home/keef/nanochatkwizzle/wandb/run-20260319_093142-246sz0mq
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run nanobot-d16
+wandb: ⭐️ View project at https://wandb.ai/kwizzlesurp10-sevtech/nanochat
+wandb: 🧹 View sweep at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/sweeps/lvnau81m
+wandb: 🚀 View run at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/246sz0mq
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+WARNING: SDPA has no support for sliding window attention (window_pattern='SSSL'). Your GPU utilization will be terrible.
+WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 128,265
+Padding vocab_size from 128265 to 128320 for efficiency
+Model config:
+{
+  "sequence_len": 3048,
+  "vocab_size": 128265,
+  "n_layer": 27,
+  "n_head": 15,
+  "n_kv_head": 15,
+  "n_embd": 3345,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "SSSL"
+}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/keef/nanochatkwizzle/scripts/base_train.py", line 171, in <module>
+    model.to_empty(device=device) # 2) All tensors get storage on target device but with uninitialized (garbage) data
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1233, in to_empty
+    return self._apply(
+           ~~~~~~~~~~~^
+        lambda t: torch.empty_like(t, device=device), recurse=recurse
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  [Previous line repeated 2 more times]
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 964, in _apply
+    param_applied = fn(param)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1234, in <lambda>
+    lambda t: torch.empty_like(t, device=device), recurse=recurse
+              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_prims_common/wrappers.py", line 315, in _fn
+    result = fn(*args, **kwargs)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_refs/__init__.py", line 5209, in empty_like
+    return torch.empty_permuted(
+           ~~~~~~~~~~~~~~~~~~~~^
+        a.shape,
+        ^^^^^^^^
+    ...<5 lines>...
+        requires_grad=requires_grad,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 44.00 MiB. GPU 0 has a total capacity of 5.61 GiB of which 77.25 MiB is free. Including non-PyTorch memory, this process has 4.79 GiB memory in use. Of the allocated memory 4.73 GiB is allocated by PyTorch, and 2.90 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+2026-03-19 09:31:45,314 - wandb.wandb_agent - INFO - Running runs: ['246sz0mq']
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mnanobot-d16[0m at: [34mhttps://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/246sz0mq[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20260319_093142-246sz0mq/logs[0m
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 49, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-u', '-m', 'scripts.base_train', '--aspect-ratio=118', '--core-metric-every=2802', '--core-metric-max-per-task=369', '--depth=27', '--device-batch-size=64', '--device-type=', '--embedding-lr=0.24852140730154287', '--eval-every=420', '--eval-tokens=61850322', '--final-lr-frac=0.07185415691223981', '--fp8', '--fp8-recipe=tensorwise', '--head-dim=223', '--matrix-lr=0.03891581225727495', '--max-seq-len=3048', '--num-iterations=-2', '--resume-from-step=-1', '--run=nanobot-d16', '--sample-every=2827', '--save-every=-1', '--scalar-lr=0.7145604520895946', '--target-flops=-2', '--target-param-data-ratio=15.180712101158832', '--total-batch-size=0', '--unembedding-lr=0.00516897032059851', '--warmdown-ratio=0.8953556814578341', '--warmup-steps=49', '--weight-decay=0.43020900472351514', '--window-pattern=SSSL']' returned non-zero exit status 1.
+2026-03-19 09:32:05,912 - wandb.wandb_agent - INFO - Cleaning up finished run: 246sz0mq
+2026-03-19 09:32:07,942 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:32:07,943 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 65
+	core_metric_every: 3330
+	core_metric_max_per_task: 810
+	depth: 32
+	device_batch_size: 41
+	device_type: 
+	embedding_lr: 0.2606172573155561
+	eval_every: 128
+	eval_tokens: 47726634
+	final_lr_frac: 0.06164686185574806
+	fp8: false
+	fp8_recipe: tensorwise
+	head_dim: 222
+	matrix_lr: 0.018750720291583325
+	max_seq_len: 2233
+	num_iterations: 0
+	resume_from_step: -2
+	run: nanobot-d16
+	sample_every: 2953
+	save_every: 0
+	scalar_lr: 0.8592581453472712
+	target_flops: -1
+	target_param_data_ratio: 7.429103954515982
+	total_batch_size: -2
+	unembedding_lr: 0.006370689901241851
+	warmdown_ratio: 0.3427816204601806
+	warmup_steps: 71
+	weight_decay: 0.16820751156000618
+	window_pattern: SSSL
+2026-03-19 09:32:07,952 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=65 --core_metric_every=3330 --core_metric_max_per_task=810 --depth=32 --device_batch_size=41 --device_type= --embedding_lr=0.2606172573155561 --eval_every=128 --eval_tokens=47726634 --final_lr_frac=0.06164686185574806 --fp8=false --fp8_recipe=tensorwise --head_dim=222 --matrix_lr=0.018750720291583325 --max_seq_len=2233 --num_iterations=0 --resume_from_step=-2 --run=nanobot-d16 --sample_every=2953 --save_every=0 --scalar_lr=0.8592581453472712 --target_flops=-1 --target_param_data_ratio=7.429103954515982 --total_batch_size=-2 --unembedding_lr=0.006370689901241851 --warmdown_ratio=0.3427816204601806 --warmup_steps=71 --weight_decay=0.16820751156000618 --window_pattern=SSSL
+DEBUG: Raw args: ['--aspect_ratio=65', '--core_metric_every=3330', '--core_metric_max_per_task=810', '--depth=32', '--device_batch_size=41', '--device_type=', '--embedding_lr=0.2606172573155561', '--eval_every=128', '--eval_tokens=47726634', '--final_lr_frac=0.06164686185574806', '--fp8=false', '--fp8_recipe=tensorwise', '--head_dim=222', '--matrix_lr=0.018750720291583325', '--max_seq_len=2233', '--num_iterations=0', '--resume_from_step=-2', '--run=nanobot-d16', '--sample_every=2953', '--save_every=0', '--scalar_lr=0.8592581453472712', '--target_flops=-1', '--target_param_data_ratio=7.429103954515982', '--total_batch_size=-2', '--unembedding_lr=0.006370689901241851', '--warmdown_ratio=0.3427816204601806', '--warmup_steps=71', '--weight_decay=0.16820751156000618', '--window_pattern=SSSL']
+DEBUG: Processed args: ['--aspect-ratio=65', '--core-metric-every=3330', '--core-metric-max-per-task=810', '--depth=32', '--device-batch-size=41', '--device-type=', '--embedding-lr=0.2606172573155561', '--eval-every=128', '--eval-tokens=47726634', '--final-lr-frac=0.06164686185574806', '--fp8-recipe=tensorwise', '--head-dim=222', '--matrix-lr=0.018750720291583325', '--max-seq-len=2233', '--num-iterations=0', '--resume-from-step=-2', '--run=nanobot-d16', '--sample-every=2953', '--save-every=0', '--scalar-lr=0.8592581453472712', '--target-flops=-1', '--target-param-data-ratio=7.429103954515982', '--total-batch-size=-2', '--unembedding-lr=0.006370689901241851', '--warmdown-ratio=0.3427816204601806', '--warmup-steps=71', '--weight-decay=0.16820751156000618', '--window-pattern=SSSL']
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.
+wandb: Currently logged in as: kwizzlesurp10 (kwizzlesurp10-sevtech) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: WARNING Ignoring project 'nanochat' when running a sweep.
+wandb: WARNING Ignoring entity 'kwizzlesurp10-sevtech' when running a sweep.
+wandb: WARNING Using a boolean value for 'reinit' is deprecated. Use 'return_previous' or 'finish_previous' instead.
+wandb: setting up run uvqmasjf
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /home/keef/nanochatkwizzle/wandb/run-20260319_093210-uvqmasjf
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run nanobot-d16
+wandb: ⭐️ View project at https://wandb.ai/kwizzlesurp10-sevtech/nanochat
+wandb: 🧹 View sweep at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/sweeps/lvnau81m
+wandb: 🚀 View run at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/uvqmasjf
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+WARNING: SDPA has no support for sliding window attention (window_pattern='SSSL'). Your GPU utilization will be terrible.
+WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 128,265
+Padding vocab_size from 128265 to 128320 for efficiency
+Model config:
+{
+  "sequence_len": 2233,
+  "vocab_size": 128265,
+  "n_layer": 32,
+  "n_head": 10,
+  "n_kv_head": 10,
+  "n_embd": 2220,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "SSSL"
+}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/keef/nanochatkwizzle/scripts/base_train.py", line 171, in <module>
+    model.to_empty(device=device) # 2) All tensors get storage on target device but with uninitialized (garbage) data
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1233, in to_empty
+    return self._apply(
+           ~~~~~~~~~~~^
+        lambda t: torch.empty_like(t, device=device), recurse=recurse
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  [Previous line repeated 2 more times]
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 964, in _apply
+    param_applied = fn(param)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1234, in <lambda>
+    lambda t: torch.empty_like(t, device=device), recurse=recurse
+              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_prims_common/wrappers.py", line 315, in _fn
+    result = fn(*args, **kwargs)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_refs/__init__.py", line 5209, in empty_like
+    return torch.empty_permuted(
+           ~~~~~~~~~~~~~~~~~~~~^
+        a.shape,
+        ^^^^^^^^
+    ...<5 lines>...
+        requires_grad=requires_grad,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 76.00 MiB. GPU 0 has a total capacity of 5.61 GiB of which 145.12 MiB is free. Including non-PyTorch memory, this process has 4.74 GiB memory in use. Of the allocated memory 4.66 GiB is allocated by PyTorch, and 9.91 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+2026-03-19 09:32:12,971 - wandb.wandb_agent - INFO - Running runs: ['uvqmasjf']
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mnanobot-d16[0m at: [34mhttps://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/uvqmasjf[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20260319_093210-uvqmasjf/logs[0m
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 49, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-u', '-m', 'scripts.base_train', '--aspect-ratio=65', '--core-metric-every=3330', '--core-metric-max-per-task=810', '--depth=32', '--device-batch-size=41', '--device-type=', '--embedding-lr=0.2606172573155561', '--eval-every=128', '--eval-tokens=47726634', '--final-lr-frac=0.06164686185574806', '--fp8-recipe=tensorwise', '--head-dim=222', '--matrix-lr=0.018750720291583325', '--max-seq-len=2233', '--num-iterations=0', '--resume-from-step=-2', '--run=nanobot-d16', '--sample-every=2953', '--save-every=0', '--scalar-lr=0.8592581453472712', '--target-flops=-1', '--target-param-data-ratio=7.429103954515982', '--total-batch-size=-2', '--unembedding-lr=0.006370689901241851', '--warmdown-ratio=0.3427816204601806', '--warmup-steps=71', '--weight-decay=0.16820751156000618', '--window-pattern=SSSL']' returned non-zero exit status 1.
+2026-03-19 09:32:38,853 - wandb.wandb_agent - INFO - Cleaning up finished run: uvqmasjf
+2026-03-19 09:32:41,033 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:32:41,033 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 103
+	core_metric_every: 3224
+	core_metric_max_per_task: 577
+	depth: 30
+	device_batch_size: 24
+	device_type: 
+	embedding_lr: 0.16551231524534488
+	eval_every: 137
+	eval_tokens: 82293973
+	final_lr_frac: 0.0691841743520151
+	fp8: true
+	fp8_recipe: tensorwise
+	head_dim: 222
+	matrix_lr: 0.019512861455135408
+	max_seq_len: 1529
+	num_iterations: -1
+	resume_from_step: 0
+	run: nanobot-d16
+	sample_every: 3195
+	save_every: -1
+	scalar_lr: 0.5251671022013582
+	target_flops: -2
+	target_param_data_ratio: 10.845573234612925
+	total_batch_size: 0
+	unembedding_lr: 0.011906278185030704
+	warmdown_ratio: 1.151501633338204
+	warmup_steps: 60
+	weight_decay: 0.41878092402476225
+	window_pattern: SSSL
+2026-03-19 09:32:41,037 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=103 --core_metric_every=3224 --core_metric_max_per_task=577 --depth=30 --device_batch_size=24 --device_type= --embedding_lr=0.16551231524534488 --eval_every=137 --eval_tokens=82293973 --final_lr_frac=0.0691841743520151 --fp8=true --fp8_recipe=tensorwise --head_dim=222 --matrix_lr=0.019512861455135408 --max_seq_len=1529 --num_iterations=-1 --resume_from_step=0 --run=nanobot-d16 --sample_every=3195 --save_every=-1 --scalar_lr=0.5251671022013582 --target_flops=-2 --target_param_data_ratio=10.845573234612925 --total_batch_size=0 --unembedding_lr=0.011906278185030704 --warmdown_ratio=1.151501633338204 --warmup_steps=60 --weight_decay=0.41878092402476225 --window_pattern=SSSL
+DEBUG: Raw args: ['--aspect_ratio=103', '--core_metric_every=3224', '--core_metric_max_per_task=577', '--depth=30', '--device_batch_size=24', '--device_type=', '--embedding_lr=0.16551231524534488', '--eval_every=137', '--eval_tokens=82293973', '--final_lr_frac=0.0691841743520151', '--fp8=true', '--fp8_recipe=tensorwise', '--head_dim=222', '--matrix_lr=0.019512861455135408', '--max_seq_len=1529', '--num_iterations=-1', '--resume_from_step=0', '--run=nanobot-d16', '--sample_every=3195', '--save_every=-1', '--scalar_lr=0.5251671022013582', '--target_flops=-2', '--target_param_data_ratio=10.845573234612925', '--total_batch_size=0', '--unembedding_lr=0.011906278185030704', '--warmdown_ratio=1.151501633338204', '--warmup_steps=60', '--weight_decay=0.41878092402476225', '--window_pattern=SSSL']
+DEBUG: Processed args: ['--aspect-ratio=103', '--core-metric-every=3224', '--core-metric-max-per-task=577', '--depth=30', '--device-batch-size=24', '--device-type=', '--embedding-lr=0.16551231524534488', '--eval-every=137', '--eval-tokens=82293973', '--final-lr-frac=0.0691841743520151', '--fp8', '--fp8-recipe=tensorwise', '--head-dim=222', '--matrix-lr=0.019512861455135408', '--max-seq-len=1529', '--num-iterations=-1', '--resume-from-step=0', '--run=nanobot-d16', '--sample-every=3195', '--save-every=-1', '--scalar-lr=0.5251671022013582', '--target-flops=-2', '--target-param-data-ratio=10.845573234612925', '--total-batch-size=0', '--unembedding-lr=0.011906278185030704', '--warmdown-ratio=1.151501633338204', '--warmup-steps=60', '--weight-decay=0.41878092402476225', '--window-pattern=SSSL']
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.
+wandb: Currently logged in as: kwizzlesurp10 (kwizzlesurp10-sevtech) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: WARNING Ignoring project 'nanochat' when running a sweep.
+wandb: WARNING Ignoring entity 'kwizzlesurp10-sevtech' when running a sweep.
+wandb: WARNING Using a boolean value for 'reinit' is deprecated. Use 'return_previous' or 'finish_previous' instead.
+wandb: setting up run 2l8thknc
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /home/keef/nanochatkwizzle/wandb/run-20260319_093243-2l8thknc
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run nanobot-d16
+wandb: ⭐️ View project at https://wandb.ai/kwizzlesurp10-sevtech/nanochat
+wandb: 🧹 View sweep at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/sweeps/lvnau81m
+wandb: 🚀 View run at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/2l8thknc
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+WARNING: SDPA has no support for sliding window attention (window_pattern='SSSL'). Your GPU utilization will be terrible.
+WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 128,265
+Padding vocab_size from 128265 to 128320 for efficiency
+Model config:
+{
+  "sequence_len": 1529,
+  "vocab_size": 128265,
+  "n_layer": 30,
+  "n_head": 14,
+  "n_kv_head": 14,
+  "n_embd": 3108,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "SSSL"
+}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/keef/nanochatkwizzle/scripts/base_train.py", line 171, in <module>
+    model.to_empty(device=device) # 2) All tensors get storage on target device but with uninitialized (garbage) data
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1233, in to_empty
+    return self._apply(
+           ~~~~~~~~~~~^
+        lambda t: torch.empty_like(t, device=device), recurse=recurse
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 933, in _apply
+    module._apply(fn)
+    ~~~~~~~~~~~~~^^^^
+  [Previous line repeated 2 more times]
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 964, in _apply
+    param_applied = fn(param)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/nn/modules/module.py", line 1234, in <lambda>
+    lambda t: torch.empty_like(t, device=device), recurse=recurse
+              ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_prims_common/wrappers.py", line 315, in _fn
+    result = fn(*args, **kwargs)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/_refs/__init__.py", line 5209, in empty_like
+    return torch.empty_permuted(
+           ~~~~~~~~~~~~~~~~~~~~^
+        a.shape,
+        ^^^^^^^^
+    ...<5 lines>...
+        requires_grad=requires_grad,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 148.00 MiB. GPU 0 has a total capacity of 5.61 GiB of which 134.38 MiB is free. Including non-PyTorch memory, this process has 4.74 GiB memory in use. Of the allocated memory 4.65 GiB is allocated by PyTorch, and 17.43 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+2026-03-19 09:32:46,050 - wandb.wandb_agent - INFO - Running runs: ['2l8thknc']
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mnanobot-d16[0m at: [34mhttps://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/2l8thknc[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20260319_093243-2l8thknc/logs[0m
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 49, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-u', '-m', 'scripts.base_train', '--aspect-ratio=103', '--core-metric-every=3224', '--core-metric-max-per-task=577', '--depth=30', '--device-batch-size=24', '--device-type=', '--embedding-lr=0.16551231524534488', '--eval-every=137', '--eval-tokens=82293973', '--final-lr-frac=0.0691841743520151', '--fp8', '--fp8-recipe=tensorwise', '--head-dim=222', '--matrix-lr=0.019512861455135408', '--max-seq-len=1529', '--num-iterations=-1', '--resume-from-step=0', '--run=nanobot-d16', '--sample-every=3195', '--save-every=-1', '--scalar-lr=0.5251671022013582', '--target-flops=-2', '--target-param-data-ratio=10.845573234612925', '--total-batch-size=0', '--unembedding-lr=0.011906278185030704', '--warmdown-ratio=1.151501633338204', '--warmup-steps=60', '--weight-decay=0.41878092402476225', '--window-pattern=SSSL']' returned non-zero exit status 1.
+2026-03-19 09:33:12,157 - wandb.wandb_agent - INFO - Cleaning up finished run: 2l8thknc
+2026-03-19 09:33:13,981 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:33:13,982 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 80
+	core_metric_every: 1499
+	core_metric_max_per_task: 833
+	depth: 8
+	device_batch_size: 36
+	device_type: 
+	embedding_lr: 0.47204082854054974
+	eval_every: 297
+	eval_tokens: 65001915
+	final_lr_frac: 0.06366163367299904
+	fp8: true
+	fp8_recipe: tensorwise
+	head_dim: 225
+	matrix_lr: 0.02481478299662738
+	max_seq_len: 2361
+	num_iterations: -2
+	resume_from_step: -2
+	run: nanobot-d16
+	sample_every: 3483
+	save_every: 0
+	scalar_lr: 0.6216613845399975
+	target_flops: -2
+	target_param_data_ratio: 17.72657242557062
+	total_batch_size: -2
+	unembedding_lr: 0.012242121385057389
+	warmdown_ratio: 0.565363515513375
+	warmup_steps: 66
+	weight_decay: 0.1454107357489433
+	window_pattern: SSSL
+2026-03-19 09:33:13,986 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=80 --core_metric_every=1499 --core_metric_max_per_task=833 --depth=8 --device_batch_size=36 --device_type= --embedding_lr=0.47204082854054974 --eval_every=297 --eval_tokens=65001915 --final_lr_frac=0.06366163367299904 --fp8=true --fp8_recipe=tensorwise --head_dim=225 --matrix_lr=0.02481478299662738 --max_seq_len=2361 --num_iterations=-2 --resume_from_step=-2 --run=nanobot-d16 --sample_every=3483 --save_every=0 --scalar_lr=0.6216613845399975 --target_flops=-2 --target_param_data_ratio=17.72657242557062 --total_batch_size=-2 --unembedding_lr=0.012242121385057389 --warmdown_ratio=0.565363515513375 --warmup_steps=66 --weight_decay=0.1454107357489433 --window_pattern=SSSL
+DEBUG: Raw args: ['--aspect_ratio=80', '--core_metric_every=1499', '--core_metric_max_per_task=833', '--depth=8', '--device_batch_size=36', '--device_type=', '--embedding_lr=0.47204082854054974', '--eval_every=297', '--eval_tokens=65001915', '--final_lr_frac=0.06366163367299904', '--fp8=true', '--fp8_recipe=tensorwise', '--head_dim=225', '--matrix_lr=0.02481478299662738', '--max_seq_len=2361', '--num_iterations=-2', '--resume_from_step=-2', '--run=nanobot-d16', '--sample_every=3483', '--save_every=0', '--scalar_lr=0.6216613845399975', '--target_flops=-2', '--target_param_data_ratio=17.72657242557062', '--total_batch_size=-2', '--unembedding_lr=0.012242121385057389', '--warmdown_ratio=0.565363515513375', '--warmup_steps=66', '--weight_decay=0.1454107357489433', '--window_pattern=SSSL']
+DEBUG: Processed args: ['--aspect-ratio=80', '--core-metric-every=1499', '--core-metric-max-per-task=833', '--depth=8', '--device-batch-size=36', '--device-type=', '--embedding-lr=0.47204082854054974', '--eval-every=297', '--eval-tokens=65001915', '--final-lr-frac=0.06366163367299904', '--fp8', '--fp8-recipe=tensorwise', '--head-dim=225', '--matrix-lr=0.02481478299662738', '--max-seq-len=2361', '--num-iterations=-2', '--resume-from-step=-2', '--run=nanobot-d16', '--sample-every=3483', '--save-every=0', '--scalar-lr=0.6216613845399975', '--target-flops=-2', '--target-param-data-ratio=17.72657242557062', '--total-batch-size=-2', '--unembedding-lr=0.012242121385057389', '--warmdown-ratio=0.565363515513375', '--warmup-steps=66', '--weight-decay=0.1454107357489433', '--window-pattern=SSSL']
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.
+wandb: Currently logged in as: kwizzlesurp10 (kwizzlesurp10-sevtech) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: WARNING Ignoring project 'nanochat' when running a sweep.
+wandb: WARNING Ignoring entity 'kwizzlesurp10-sevtech' when running a sweep.
+wandb: WARNING Using a boolean value for 'reinit' is deprecated. Use 'return_previous' or 'finish_previous' instead.
+wandb: setting up run upf0pqla
+wandb: Tracking run with wandb version 0.25.0
+wandb: Run data is saved locally in /home/keef/nanochatkwizzle/wandb/run-20260319_093316-upf0pqla
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run nanobot-d16
+wandb: ⭐️ View project at https://wandb.ai/kwizzlesurp10-sevtech/nanochat
+wandb: 🧹 View sweep at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/sweeps/lvnau81m
+wandb: 🚀 View run at https://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/upf0pqla
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+WARNING: SDPA has no support for sliding window attention (window_pattern='SSSL'). Your GPU utilization will be terrible.
+WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 128,265
+Padding vocab_size from 128265 to 128320 for efficiency
+Model config:
+{
+  "sequence_len": 2361,
+  "vocab_size": 128265,
+  "n_layer": 8,
+  "n_head": 3,
+  "n_kv_head": 3,
+  "n_embd": 675,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "SSSL"
+}
+Resuming optimization from step -2
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/keef/nanochatkwizzle/scripts/base_train.py", line 195, in <module>
+    model_data, optimizer_data, meta_data = load_checkpoint(checkpoint_dir, args.resume_from_step, device, load_optimizer=True, rank=ddp_rank)
+                                            ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/keef/nanochatkwizzle/nanochat/checkpoint_manager.py", line 76, in load_checkpoint
+    model_data = torch.load(model_path, map_location=device)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/serialization.py", line 1500, in load
+    with _open_file_like(f, "rb") as opened_file:
+         ~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/serialization.py", line 768, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/home/keef/anaconda3/lib/python3.13/site-packages/torch/serialization.py", line 749, in __init__
+    super().__init__(open(name, mode))  # noqa: SIM115
+                     ~~~~^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/keef/.cache/nanochat/base_checkpoints/d8/model_-00002.pt'
+2026-03-19 09:33:18,998 - wandb.wandb_agent - INFO - Running runs: ['upf0pqla']
+[1;34mwandb[0m: 
+[1;34mwandb[0m: 🚀 View run [33mnanobot-d16[0m at: [34mhttps://wandb.ai/kwizzlesurp10-sevtech/nanochat/runs/upf0pqla[0m
+[1;34mwandb[0m: Find logs at: [1;35mwandb/run-20260319_093316-upf0pqla/logs[0m
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 49, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-u', '-m', 'scripts.base_train', '--aspect-ratio=80', '--core-metric-every=1499', '--core-metric-max-per-task=833', '--depth=8', '--device-batch-size=36', '--device-type=', '--embedding-lr=0.47204082854054974', '--eval-every=297', '--eval-tokens=65001915', '--final-lr-frac=0.06366163367299904', '--fp8', '--fp8-recipe=tensorwise', '--head-dim=225', '--matrix-lr=0.02481478299662738', '--max-seq-len=2361', '--num-iterations=-2', '--resume-from-step=-2', '--run=nanobot-d16', '--sample-every=3483', '--save-every=0', '--scalar-lr=0.6216613845399975', '--target-flops=-2', '--target-param-data-ratio=17.72657242557062', '--total-batch-size=-2', '--unembedding-lr=0.012242121385057389', '--warmdown-ratio=0.565363515513375', '--warmup-steps=66', '--weight-decay=0.1454107357489433', '--window-pattern=SSSL']' returned non-zero exit status 1.
+2026-03-19 09:33:44,857 - wandb.wandb_agent - ERROR - Detected 5 failed runs in a row, shutting down.
+2026-03-19 09:33:44,858 - wandb.wandb_agent - INFO - To change this value set WANDB_AGENT_MAX_INITIAL_FAILURES=val
+wandb: Terminating and syncing runs. Press ctrl-c to kill.

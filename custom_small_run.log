@@ -1,0 +1,6 @@
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.

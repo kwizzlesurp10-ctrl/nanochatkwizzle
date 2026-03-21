@@ -1,0 +1,242 @@
++ export OMP_NUM_THREADS=1
++ OMP_NUM_THREADS=1
++ export PYTORCH_ALLOC_CONF=expandable_segments:True
++ PYTORCH_ALLOC_CONF=expandable_segments:True
++ export PYTHONUNBUFFERED=1
++ PYTHONUNBUFFERED=1
++ export NANOCHAT_BASE_DIR=/home/keef/.cache/nanochat
++ NANOCHAT_BASE_DIR=/home/keef/.cache/nanochat
++ mkdir -p /home/keef/.cache/nanochat
++ rm -rf /home/keef/.cache/nanochat/tokenizer
++ rm -rf /home/keef/.cache/nanochat/base_checkpoints
++ rm -rf /home/keef/.cache/nanochat/chatsft_checkpoints
++ rm -rf /home/keef/.cache/nanochat/base_eval
++ rm -rf /home/keef/.cache/nanochat/chatsft_eval
++ command -v uv
++ '[' -d .venv ']'
++ uv sync --extra gpu
+Resolved 183 packages in 0.67ms
+Audited 124 packages in 0.58ms
++ source .venv/bin/activate
+++ '[' -z '' ']'
+++ '[' -n x ']'
+++ SCRIPT_PATH=.venv/bin/activate
+++ '[' .venv/bin/activate = runs/speedrun.sh ']'
+++ deactivate nondestructive
+++ unset -f pydoc
+++ '[' -z '' ']'
+++ '[' -z '' ']'
+++ hash -r
+++ '[' -z '' ']'
+++ unset VIRTUAL_ENV
+++ unset VIRTUAL_ENV_PROMPT
+++ '[' '!' nondestructive = nondestructive ']'
+++ VIRTUAL_ENV=/home/keef/nanochatkwizzle/.venv
+++ '[' linux-gnu = cygwin ']'
+++ '[' linux-gnu = msys ']'
+++ export VIRTUAL_ENV
+++ '[' -z '' ']'
+++ unset SCRIPT_PATH
+++ _OLD_VIRTUAL_PATH=/home/keef/.nvm/versions/node/v24.14.0/bin:/home/keef/.local/share/pnpm:/home/keef/anaconda3/bin:/home/keef/anaconda3/condabin:/home/keef/documents/MiniMaxOG/phoenix:/home/keef/documents/MiniMaxOG:/home/keef/documents/MiniMaxOG:/home/keef/.local/bin:/home/keef/.nvm/versions/node/v24.14.0/bin:/home/keef/.cargo/bin:/home/keef/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/keef/.cursor/extensions/ms-python.debugpy-2025.18.0-linux-x64/bundled/scripts/noConfigScripts:/home/keef/go/bin:/home/keef/.cursor/extensions/d-biehl.robotcode-2.2.0-universal/bundled/scripts
+++ PATH=/home/keef/nanochatkwizzle/.venv/bin:/home/keef/.nvm/versions/node/v24.14.0/bin:/home/keef/.local/share/pnpm:/home/keef/anaconda3/bin:/home/keef/anaconda3/condabin:/home/keef/documents/MiniMaxOG/phoenix:/home/keef/documents/MiniMaxOG:/home/keef/documents/MiniMaxOG:/home/keef/.local/bin:/home/keef/.nvm/versions/node/v24.14.0/bin:/home/keef/.cargo/bin:/home/keef/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/home/keef/.cursor/extensions/ms-python.debugpy-2025.18.0-linux-x64/bundled/scripts/noConfigScripts:/home/keef/go/bin:/home/keef/.cursor/extensions/d-biehl.robotcode-2.2.0-universal/bundled/scripts
+++ export PATH
+++ '[' xnanochatkwizzle '!=' x ']'
+++ VIRTUAL_ENV_PROMPT=nanochatkwizzle
+++ export VIRTUAL_ENV_PROMPT
+++ '[' -z '' ']'
+++ '[' -z '' ']'
+++ _OLD_VIRTUAL_PS1=
+++ PS1='(nanochatkwizzle) '
+++ export PS1
+++ alias pydoc
+++ true
+++ hash -r
++ '[' -z '' ']'
++ WANDB_RUN=dummy
++ python -m nanochat.report reset
+Reset report and wrote header to /home/keef/.cache/nanochat/report/header.md
++ python -m nanochat.dataset -n 2
+Downloading 3 shards using 4 workers...
+Target directory: /home/keef/.cache/nanochat/base_data_climbmix
+
+Skipping /home/keef/.cache/nanochat/base_data_climbmix/shard_00000.parquet (already exists)Skipping /home/keef/.cache/nanochat/base_data_climbmix/shard_00001.parquet (already exists)
+
+Skipping /home/keef/.cache/nanochat/base_data_climbmix/shard_06542.parquet (already exists)
+Done! Downloaded: 3/3 shards to /home/keef/.cache/nanochat/base_data_climbmix
++ python -m scripts.tok_train --vocab-size 1024 --max-chars 1000000
+max_chars: 1,000,000
+doc_cap: 10,000
+vocab_size: 1,024
+use_llama_tokenizer: False
+2026-03-19 23:42:35,211 - rustbpe - [32m[1mINFO[0m - Processing sequences from iterator (buffer_size: 8192)
+2026-03-19 23:42:35,235 - rustbpe - [32m[1mINFO[0m - Processed 379 sequences total, 21683 unique
+2026-03-19 23:42:35,236 - rustbpe - [32m[1mINFO[0m - Starting BPE training: 759 merges to compute
+2026-03-19 23:42:35,236 - rustbpe - [32m[1mINFO[0m - Computing initial pair counts from 21683 unique sequences
+2026-03-19 23:42:35,251 - rustbpe - [32m[1mINFO[0m - Building heap with 2236 unique pairs
+2026-03-19 23:42:35,252 - rustbpe - [32m[1mINFO[0m - Starting merge loop
+2026-03-19 23:42:35,253 - rustbpe - [32m[1mINFO[0m - Progress: [1m1%[0m (8/759 merges) - Last merge: (101, 114) -> 263 (frequency: 9565)
+2026-03-19 23:42:35,254 - rustbpe - [32m[1mINFO[0m - Progress: [1m2%[0m (16/759 merges) - Last merge: (258, 103) -> 271 (frequency: 6495)
+2026-03-19 23:42:35,255 - rustbpe - [32m[1mINFO[0m - Progress: [1m3%[0m (23/759 merges) - Last merge: (111, 114) -> 278 (frequency: 5951)
+2026-03-19 23:42:35,256 - rustbpe - [32m[1mINFO[0m - Progress: [1m4%[0m (31/759 merges) - Last merge: (32, 100) -> 286 (frequency: 4845)
+2026-03-19 23:42:35,256 - rustbpe - [32m[1mINFO[0m - Progress: [1m5%[0m (38/759 merges) - Last merge: (114, 111) -> 293 (frequency: 3848)
+2026-03-19 23:42:35,257 - rustbpe - [32m[1mINFO[0m - Progress: [1m6%[0m (46/759 merges) - Last merge: (111, 109) -> 301 (frequency: 2663)
+2026-03-19 23:42:35,257 - rustbpe - [32m[1mINFO[0m - Progress: [1m7%[0m (54/759 merges) - Last merge: (115, 116) -> 309 (frequency: 2334)
+2026-03-19 23:42:35,258 - rustbpe - [32m[1mINFO[0m - Progress: [1m8%[0m (61/759 merges) - Last merge: (111, 119) -> 316 (frequency: 2095)
+2026-03-19 23:42:35,258 - rustbpe - [32m[1mINFO[0m - Progress: [1m9%[0m (69/759 merges) - Last merge: (32, 84) -> 324 (frequency: 1791)
+2026-03-19 23:42:35,259 - rustbpe - [32m[1mINFO[0m - Progress: [1m10%[0m (76/759 merges) - Last merge: (117, 114) -> 331 (frequency: 1657)
+2026-03-19 23:42:35,259 - rustbpe - [32m[1mINFO[0m - Progress: [1m11%[0m (84/759 merges) - Last merge: (97, 121) -> 339 (frequency: 1432)
+2026-03-19 23:42:35,259 - rustbpe - [32m[1mINFO[0m - Progress: [1m12%[0m (92/759 merges) - Last merge: (267, 261) -> 347 (frequency: 1254)
+2026-03-19 23:42:35,259 - rustbpe - [32m[1mINFO[0m - Progress: [1m13%[0m (99/759 merges) - Last merge: (10, 10) -> 354 (frequency: 1178)
+2026-03-19 23:42:35,259 - rustbpe - [32m[1mINFO[0m - Progress: [1m14%[0m (107/759 merges) - Last merge: (107, 101) -> 362 (frequency: 1116)
+2026-03-19 23:42:35,260 - rustbpe - [32m[1mINFO[0m - Progress: [1m15%[0m (114/759 merges) - Last merge: (116, 115) -> 369 (frequency: 988)
+2026-03-19 23:42:35,260 - rustbpe - [32m[1mINFO[0m - Progress: [1m16%[0m (122/759 merges) - Last merge: (267, 301) -> 377 (frequency: 918)
+2026-03-19 23:42:35,260 - rustbpe - [32m[1mINFO[0m - Progress: [1m17%[0m (130/759 merges) - Last merge: (111, 112) -> 385 (frequency: 870)
+2026-03-19 23:42:35,260 - rustbpe - [32m[1mINFO[0m - Progress: [1m18%[0m (137/759 merges) - Last merge: (265, 101) -> 392 (frequency: 811)
+2026-03-19 23:42:35,261 - rustbpe - [32m[1mINFO[0m - Progress: [1m19%[0m (145/759 merges) - Last merge: (112, 112) -> 400 (frequency: 770)
+2026-03-19 23:42:35,261 - rustbpe - [32m[1mINFO[0m - Progress: [1m20%[0m (152/759 merges) - Last merge: (260, 115) -> 407 (frequency: 738)
+2026-03-19 23:42:35,261 - rustbpe - [32m[1mINFO[0m - Progress: [1m21%[0m (160/759 merges) - Last merge: (273, 121) -> 415 (frequency: 687)
+2026-03-19 23:42:35,262 - rustbpe - [32m[1mINFO[0m - Progress: [1m22%[0m (167/759 merges) - Last merge: (105, 118) -> 422 (frequency: 655)
+2026-03-19 23:42:35,262 - rustbpe - [32m[1mINFO[0m - Progress: [1m23%[0m (175/759 merges) - Last merge: (285, 100) -> 430 (frequency: 616)
+2026-03-19 23:42:35,262 - rustbpe - [32m[1mINFO[0m - Progress: [1m24%[0m (183/759 merges) - Last merge: (110, 115) -> 438 (frequency: 586)
+2026-03-19 23:42:35,262 - rustbpe - [32m[1mINFO[0m - Progress: [1m25%[0m (190/759 merges) - Last merge: (318, 101) -> 445 (frequency: 558)
+2026-03-19 23:42:35,262 - rustbpe - [32m[1mINFO[0m - Progress: [1m26%[0m (198/759 merges) - Last merge: (262, 121) -> 453 (frequency: 529)
+2026-03-19 23:42:35,263 - rustbpe - [32m[1mINFO[0m - Progress: [1m27%[0m (205/759 merges) - Last merge: (112, 116) -> 460 (frequency: 520)
+2026-03-19 23:42:35,263 - rustbpe - [32m[1mINFO[0m - Progress: [1m28%[0m (213/759 merges) - Last merge: (119, 263) -> 468 (frequency: 499)
+2026-03-19 23:42:35,263 - rustbpe - [32m[1mINFO[0m - Progress: [1m29%[0m (221/759 merges) - Last merge: (279, 114) -> 476 (frequency: 472)
+2026-03-19 23:42:35,263 - rustbpe - [32m[1mINFO[0m - Progress: [1m30%[0m (228/759 merges) - Last merge: (32, 71) -> 483 (frequency: 451)
+2026-03-19 23:42:35,263 - rustbpe - [32m[1mINFO[0m - Progress: [1m31%[0m (236/759 merges) - Last merge: (377, 112) -> 491 (frequency: 432)
+2026-03-19 23:42:35,263 - rustbpe - [32m[1mINFO[0m - Progress: [1m32%[0m (243/759 merges) - Last merge: (97, 362) -> 498 (frequency: 422)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m33%[0m (251/759 merges) - Last merge: (105, 122) -> 506 (frequency: 414)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m34%[0m (259/759 merges) - Last merge: (32, 106) -> 514 (frequency: 401)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m35%[0m (266/759 merges) - Last merge: (374, 101) -> 521 (frequency: 392)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m36%[0m (274/759 merges) - Last merge: (361, 452) -> 529 (frequency: 371)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m37%[0m (281/759 merges) - Last merge: (261, 103) -> 536 (frequency: 363)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m38%[0m (289/759 merges) - Last merge: (282, 281) -> 544 (frequency: 351)
+2026-03-19 23:42:35,264 - rustbpe - [32m[1mINFO[0m - Progress: [1m39%[0m (297/759 merges) - Last merge: (328, 112) -> 552 (frequency: 343)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m40%[0m (304/759 merges) - Last merge: (32, 293) -> 559 (frequency: 327)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m41%[0m (312/759 merges) - Last merge: (324, 104) -> 567 (frequency: 321)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m42%[0m (319/759 merges) - Last merge: (101, 112) -> 574 (frequency: 317)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m43%[0m (327/759 merges) - Last merge: (112, 108) -> 582 (frequency: 311)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m44%[0m (334/759 merges) - Last merge: (278, 109) -> 589 (frequency: 304)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m45%[0m (342/759 merges) - Last merge: (108, 108) -> 597 (frequency: 298)
+2026-03-19 23:42:35,265 - rustbpe - [32m[1mINFO[0m - Progress: [1m46%[0m (350/759 merges) - Last merge: (300, 290) -> 605 (frequency: 287)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m47%[0m (357/759 merges) - Last merge: (319, 410) -> 612 (frequency: 281)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m48%[0m (365/759 merges) - Last merge: (279, 274) -> 620 (frequency: 267)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m49%[0m (372/759 merges) - Last merge: (267, 319) -> 627 (frequency: 259)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m50%[0m (380/759 merges) - Last merge: (337, 116) -> 635 (frequency: 248)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m51%[0m (388/759 merges) - Last merge: (294, 316) -> 643 (frequency: 243)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m52%[0m (395/759 merges) - Last merge: (279, 466) -> 650 (frequency: 236)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m53%[0m (403/759 merges) - Last merge: (99, 268) -> 658 (frequency: 227)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m54%[0m (410/759 merges) - Last merge: (107, 115) -> 665 (frequency: 225)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m55%[0m (418/759 merges) - Last merge: (573, 317) -> 673 (frequency: 221)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m56%[0m (426/759 merges) - Last merge: (121, 112) -> 681 (frequency: 216)
+2026-03-19 23:42:35,266 - rustbpe - [32m[1mINFO[0m - Progress: [1m57%[0m (433/759 merges) - Last merge: (351, 291) -> 688 (frequency: 215)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m58%[0m (441/759 merges) - Last merge: (314, 116) -> 696 (frequency: 211)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m59%[0m (448/759 merges) - Last merge: (49, 48) -> 703 (frequency: 203)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m60%[0m (456/759 merges) - Last merge: (282, 111) -> 711 (frequency: 201)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m61%[0m (463/759 merges) - Last merge: (102, 335) -> 718 (frequency: 197)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m62%[0m (471/759 merges) - Last merge: (256, 119) -> 726 (frequency: 192)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m63%[0m (479/759 merges) - Last merge: (112, 292) -> 734 (frequency: 189)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m64%[0m (486/759 merges) - Last merge: (291, 107) -> 741 (frequency: 186)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m65%[0m (494/759 merges) - Last merge: (336, 311) -> 749 (frequency: 180)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m66%[0m (501/759 merges) - Last merge: (272, 705) -> 756 (frequency: 178)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m67%[0m (509/759 merges) - Last merge: (295, 660) -> 764 (frequency: 173)
+2026-03-19 23:42:35,267 - rustbpe - [32m[1mINFO[0m - Progress: [1m68%[0m (517/759 merges) - Last merge: (273, 115) -> 772 (frequency: 169)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m69%[0m (524/759 merges) - Last merge: (439, 292) -> 779 (frequency: 166)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m70%[0m (532/759 merges) - Last merge: (281, 458) -> 787 (frequency: 163)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m71%[0m (539/759 merges) - Last merge: (269, 103) -> 794 (frequency: 162)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m72%[0m (547/759 merges) - Last merge: (397, 776) -> 802 (frequency: 161)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m73%[0m (555/759 merges) - Last merge: (304, 317) -> 810 (frequency: 159)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m74%[0m (562/759 merges) - Last merge: (299, 421) -> 817 (frequency: 156)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m75%[0m (570/759 merges) - Last merge: (270, 451) -> 825 (frequency: 153)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m76%[0m (577/759 merges) - Last merge: (265, 391) -> 832 (frequency: 151)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m77%[0m (585/759 merges) - Last merge: (257, 99) -> 840 (frequency: 148)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m78%[0m (593/759 merges) - Last merge: (463, 271) -> 848 (frequency: 146)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m79%[0m (600/759 merges) - Last merge: (272, 319) -> 855 (frequency: 144)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m80%[0m (608/759 merges) - Last merge: (315, 104) -> 863 (frequency: 142)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m81%[0m (615/759 merges) - Last merge: (404, 101) -> 870 (frequency: 140)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m82%[0m (623/759 merges) - Last merge: (326, 109) -> 878 (frequency: 137)
+2026-03-19 23:42:35,268 - rustbpe - [32m[1mINFO[0m - Progress: [1m83%[0m (630/759 merges) - Last merge: (256, 344) -> 885 (frequency: 135)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m84%[0m (638/759 merges) - Last merge: (264, 542) -> 893 (frequency: 133)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m85%[0m (646/759 merges) - Last merge: (314, 271) -> 901 (frequency: 131)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m86%[0m (653/759 merges) - Last merge: (418, 285) -> 908 (frequency: 130)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m87%[0m (661/759 merges) - Last merge: (310, 446) -> 916 (frequency: 129)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m88%[0m (668/759 merges) - Last merge: (310, 617) -> 923 (frequency: 128)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m89%[0m (676/759 merges) - Last merge: (257, 759) -> 931 (frequency: 126)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m90%[0m (684/759 merges) - Last merge: (100, 115) -> 939 (frequency: 124)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m91%[0m (691/759 merges) - Last merge: (321, 121) -> 946 (frequency: 123)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m92%[0m (699/759 merges) - Last merge: (361, 551) -> 954 (frequency: 122)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m93%[0m (706/759 merges) - Last merge: (472, 271) -> 961 (frequency: 121)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m94%[0m (714/759 merges) - Last merge: (256, 498) -> 969 (frequency: 119)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m95%[0m (722/759 merges) - Last merge: (661, 279) -> 977 (frequency: 118)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m96%[0m (729/759 merges) - Last merge: (97, 119) -> 984 (frequency: 115)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m97%[0m (737/759 merges) - Last merge: (301, 109) -> 992 (frequency: 114)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m98%[0m (744/759 merges) - Last merge: (264, 319) -> 999 (frequency: 113)
+2026-03-19 23:42:35,269 - rustbpe - [32m[1mINFO[0m - Progress: [1m99%[0m (752/759 merges) - Last merge: (352, 737) -> 1007 (frequency: 112)
+2026-03-19 23:42:35,270 - rustbpe - [32m[1mINFO[0m - Progress: [1m100%[0m (759/759 merges) - Last merge: (335, 108) -> 1014 (frequency: 111)
+2026-03-19 23:42:35,270 - rustbpe - [32m[1mINFO[0m - Finished training: 759 merges completed
+Training time: 0.06s
+Saved tokenizer encoding to /home/keef/.cache/nanochat/tokenizer/tokenizer.pkl
+Saved token_bytes to /home/keef/.cache/nanochat/tokenizer/token_bytes.pt
++ python -m scripts.tok_eval
+
+Vocab sizes:
+cl100k (reference): 100277
+Ours: 1024
+
+Comparison with cl100k:
+===============================================================================================
+Text Type  Bytes    cl100k          Ours            Relative     Better    
+                    Tokens  Ratio   Tokens  Ratio   Diff %      
+-----------------------------------------------------------------------------------------------
+news       1819     [92m387    [0m [92m4.70   [0m [91m799    [0m [91m2.28   [0m [91m -106.5%[0m     cl100k    
+korean     893      [92m364    [0m [92m2.45   [0m [91m863    [0m [91m1.03   [0m [91m -137.1%[0m     cl100k    
+code       1259     [92m309    [0m [92m4.07   [0m [91m831    [0m [91m1.52   [0m [91m -168.9%[0m     cl100k    
+math       1834     [92m832    [0m [92m2.20   [0m [91m1314   [0m [91m1.40   [0m [91m  -57.9%[0m     cl100k    
+science    1112     [92m249    [0m [92m4.47   [0m [91m498    [0m [91m2.23   [0m [91m -100.0%[0m     cl100k    
+fwe-train  2948778  [92m611619 [0m [92m4.82   [0m [91m1151125[0m [91m2.56   [0m [91m  -88.2%[0m     cl100k    
+fwe-val    3024593  [92m631183 [0m [92m4.79   [0m [91m1190330[0m [91m2.54   [0m [91m  -88.6%[0m     cl100k    
++ python -m scripts.base_train --depth=4 --aspect-ratio=32 --max-seq-len=256 --window-pattern=L --total-batch-size=8192 --num-iterations=50 --device-batch-size=4 --eval-tokens=8192 --eval-every=50 --core-metric-every=-1 --run=dummy
+============================================================
+nanochat base_train
+============================================================
+GPU: NVIDIA GeForce GTX 1660 SUPER | Peak FLOPS (BF16): 1.00e+14
+COMPUTE_DTYPE: torch.float32 (auto-detected: CUDA SM 75 (pre-Ampere, bf16 not supported, using fp32))
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback
+WARNING: Training will be less efficient without FA3
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Vocab size: 1,024
+Model config:
+{
+  "sequence_len": 256,
+  "vocab_size": 1024,
+  "n_layer": 4,
+  "n_head": 1,
+  "n_kv_head": 1,
+  "n_embd": 128,
+  "dropout": 0.0,
+  "lora_rank": 0,
+  "lora_alpha": 16,
+  "window_pattern": "L"
+}
+Parameter counts:
+wte                     : 131,072
+value_embeds            : 262,144
+lm_head                 : 131,072
+transformer_matrices    : 786,456
+scalars                 : 34
+total                   : 1,310,778
+Estimated FLOPs per token: 7.078032e+06
+Scaling LRs by 0.1250 for batch size 8,192 (reference: 524,288)
+Scaling weight decay from 0.280000 to 0.824987 for depth 4
+Scaling the LR for the AdamW parameters ∝1/√(128/768) = 2.449490
+Using user-provided number of iterations: 50
+Total number of training tokens: 409,600
+Tokens : Scaling params ratio: 0.45
+Total training FLOPs estimate: 2.899162e+12
+Tokens / micro-batch / rank: 4 x 256 = 1,024
+Tokens / micro-batch: 1,024
+Total batch size 8,192 => gradient accumulation steps: 8
+Step 00000 | Validation bpb: 3.973425
+step 00000/00050 (0.00%) | loss: 6.930737 | lrm: 0.03 | dt: 1722.64ms | tok/sec: 4,755 | bf16_mfu: 0.03 | epoch: 1 pq: 0 rg: 1 | total time: 0.00m

@@ -1,0 +1,220 @@
+wandb: Starting wandb agent 🕵️
+2026-03-19 09:21:57,438 - wandb.wandb_agent - INFO - Running runs: []
+2026-03-19 09:21:59,113 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:21:59,113 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 86
+	core_metric_every: 1989
+	core_metric_max_per_task: 617
+	depth: 24
+	device_batch_size: 44
+	device_type: 
+	embedding_lr: 0.2359202053983646
+	eval_every: 468
+	eval_tokens: 75584718
+	final_lr_frac: 0.04740865161882822
+	fp8: true
+	fp8_recipe: tensorwise
+	head_dim: 66
+	matrix_lr: 0.015589159528990554
+	max_seq_len: 1371
+	num_iterations: -1
+	resume_from_step: 0
+	run: nanobot-d16
+	sample_every: 2431
+	save_every: -1
+	scalar_lr: 0.6967753338602098
+	target_flops: -1
+	target_param_data_ratio: 10.775498434174445
+	total_batch_size: -2
+	unembedding_lr: 0.01407900514586926
+	warmdown_ratio: 0.9291110194489808
+	warmup_steps: 53
+	weight_decay: 0.3913804781856378
+	window_pattern: SSSL
+2026-03-19 09:21:59,122 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=86 --core_metric_every=1989 --core_metric_max_per_task=617 --depth=24 --device_batch_size=44 --device_type= --embedding_lr=0.2359202053983646 --eval_every=468 --eval_tokens=75584718 --final_lr_frac=0.04740865161882822 --fp8=true --fp8_recipe=tensorwise --head_dim=66 --matrix_lr=0.015589159528990554 --max_seq_len=1371 --num_iterations=-1 --resume_from_step=0 --run=nanobot-d16 --sample_every=2431 --save_every=-1 --scalar_lr=0.6967753338602098 --target_flops=-1 --target_param_data_ratio=10.775498434174445 --total_batch_size=-2 --unembedding_lr=0.01407900514586926 --warmdown_ratio=0.9291110194489808 --warmup_steps=53 --weight_decay=0.3913804781856378 --window_pattern=SSSL
+============================================================
+nanochat base_train
+============================================================
+usage: base_train.py [-h] [--run RUN] [--wandb-entity WANDB_ENTITY]
+                     [--wandb-project WANDB_PROJECT]
+                     [--device-type DEVICE_TYPE] [--fp8]
+                     [--fp8-recipe {rowwise,tensorwise}] [--depth DEPTH]
+                     [--aspect-ratio ASPECT_RATIO] [--head-dim HEAD_DIM]
+                     [--max-seq-len MAX_SEQ_LEN] [--dropout DROPOUT]
+                     [--lora-rank LORA_RANK] [--lora-alpha LORA_ALPHA]
+                     [--window-pattern WINDOW_PATTERN]
+                     [--num-iterations NUM_ITERATIONS] [--epochs EPOCHS]
+                     [--target-flops TARGET_FLOPS]
+                     [--target-param-data-ratio TARGET_PARAM_DATA_RATIO]
+                     [--optimizer-type {muon,adamw}] [--user-data USER_DATA]
+                     [--device-batch-size DEVICE_BATCH_SIZE]
+                     [--total-batch-size TOTAL_BATCH_SIZE]
+                     [--embedding-lr EMBEDDING_LR]
+                     [--unembedding-lr UNEMBEDDING_LR]
+                     [--weight-decay WEIGHT_DECAY] [--matrix-lr MATRIX_LR]
+                     [--scalar-lr SCALAR_LR] [--warmup-steps WARMUP_STEPS]
+                     [--warmdown-ratio WARMDOWN_RATIO]
+                     [--final-lr-frac FINAL_LR_FRAC]
+                     [--resume-from-step RESUME_FROM_STEP]
+                     [--eval-every EVAL_EVERY] [--eval-tokens EVAL_TOKENS]
+                     [--core-metric-every CORE_METRIC_EVERY]
+                     [--core-metric-max-per-task CORE_METRIC_MAX_PER_TASK]
+                     [--sample-every SAMPLE_EVERY] [--save-every SAVE_EVERY]
+                     [--model-tag MODEL_TAG]
+base_train.py: error: argument --fp8: ignored explicit argument 'true'
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 7, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-m', 'scripts.base_train', '--aspect_ratio=86', '--core_metric_every=1989', '--core_metric_max_per_task=617', '--depth=24', '--device_batch_size=44', '--device_type=', '--embedding_lr=0.2359202053983646', '--eval_every=468', '--eval_tokens=75584718', '--final_lr_frac=0.04740865161882822', '--fp8=true', '--fp8_recipe=tensorwise', '--head_dim=66', '--matrix_lr=0.015589159528990554', '--max_seq_len=1371', '--num_iterations=-1', '--resume_from_step=0', '--run=nanobot-d16', '--sample_every=2431', '--save_every=-1', '--scalar_lr=0.6967753338602098', '--target_flops=-1', '--target_param_data_ratio=10.775498434174445', '--total_batch_size=-2', '--unembedding_lr=0.01407900514586926', '--warmdown_ratio=0.9291110194489808', '--warmup_steps=53', '--weight_decay=0.3913804781856378', '--window_pattern=SSSL']' returned non-zero exit status 2.
+2026-03-19 09:22:04,134 - wandb.wandb_agent - INFO - Running runs: ['dt5onqrj']
+2026-03-19 09:22:04,134 - wandb.wandb_agent - INFO - Cleaning up finished run: dt5onqrj
+2026-03-19 09:22:05,645 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:22:05,645 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 104
+	core_metric_every: 1396
+	core_metric_max_per_task: 975
+	depth: 10
+	device_batch_size: 61
+	device_type: 
+	embedding_lr: 0.3342002102728796
+	eval_every: 320
+	eval_tokens: 65737516
+	final_lr_frac: 0.08602246532991537
+	fp8: false
+	fp8_recipe: tensorwise
+	head_dim: 184
+	matrix_lr: 0.037284843565957015
+	max_seq_len: 3996
+	num_iterations: -2
+	resume_from_step: 0
+	run: nanobot-d16
+	sample_every: 3354
+	save_every: 0
+	scalar_lr: 0.7085520268111714
+	target_flops: -1
+	target_param_data_ratio: 15.241394520321814
+	total_batch_size: 0
+	unembedding_lr: 0.004202948830766023
+	warmdown_ratio: 0.7336642245624083
+	warmup_steps: 29
+	weight_decay: 0.514728986679277
+	window_pattern: SSSL
+2026-03-19 09:22:05,647 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=104 --core_metric_every=1396 --core_metric_max_per_task=975 --depth=10 --device_batch_size=61 --device_type= --embedding_lr=0.3342002102728796 --eval_every=320 --eval_tokens=65737516 --final_lr_frac=0.08602246532991537 --fp8=false --fp8_recipe=tensorwise --head_dim=184 --matrix_lr=0.037284843565957015 --max_seq_len=3996 --num_iterations=-2 --resume_from_step=0 --run=nanobot-d16 --sample_every=3354 --save_every=0 --scalar_lr=0.7085520268111714 --target_flops=-1 --target_param_data_ratio=15.241394520321814 --total_batch_size=0 --unembedding_lr=0.004202948830766023 --warmdown_ratio=0.7336642245624083 --warmup_steps=29 --weight_decay=0.514728986679277 --window_pattern=SSSL
+============================================================
+nanochat base_train
+============================================================
+usage: base_train.py [-h] [--run RUN] [--wandb-entity WANDB_ENTITY]
+                     [--wandb-project WANDB_PROJECT]
+                     [--device-type DEVICE_TYPE] [--fp8]
+                     [--fp8-recipe {rowwise,tensorwise}] [--depth DEPTH]
+                     [--aspect-ratio ASPECT_RATIO] [--head-dim HEAD_DIM]
+                     [--max-seq-len MAX_SEQ_LEN] [--dropout DROPOUT]
+                     [--lora-rank LORA_RANK] [--lora-alpha LORA_ALPHA]
+                     [--window-pattern WINDOW_PATTERN]
+                     [--num-iterations NUM_ITERATIONS] [--epochs EPOCHS]
+                     [--target-flops TARGET_FLOPS]
+                     [--target-param-data-ratio TARGET_PARAM_DATA_RATIO]
+                     [--optimizer-type {muon,adamw}] [--user-data USER_DATA]
+                     [--device-batch-size DEVICE_BATCH_SIZE]
+                     [--total-batch-size TOTAL_BATCH_SIZE]
+                     [--embedding-lr EMBEDDING_LR]
+                     [--unembedding-lr UNEMBEDDING_LR]
+                     [--weight-decay WEIGHT_DECAY] [--matrix-lr MATRIX_LR]
+                     [--scalar-lr SCALAR_LR] [--warmup-steps WARMUP_STEPS]
+                     [--warmdown-ratio WARMDOWN_RATIO]
+                     [--final-lr-frac FINAL_LR_FRAC]
+                     [--resume-from-step RESUME_FROM_STEP]
+                     [--eval-every EVAL_EVERY] [--eval-tokens EVAL_TOKENS]
+                     [--core-metric-every CORE_METRIC_EVERY]
+                     [--core-metric-max-per-task CORE_METRIC_MAX_PER_TASK]
+                     [--sample-every SAMPLE_EVERY] [--save-every SAVE_EVERY]
+                     [--model-tag MODEL_TAG]
+base_train.py: error: argument --fp8: ignored explicit argument 'false'
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 7, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-m', 'scripts.base_train', '--aspect_ratio=104', '--core_metric_every=1396', '--core_metric_max_per_task=975', '--depth=10', '--device_batch_size=61', '--device_type=', '--embedding_lr=0.3342002102728796', '--eval_every=320', '--eval_tokens=65737516', '--final_lr_frac=0.08602246532991537', '--fp8=false', '--fp8_recipe=tensorwise', '--head_dim=184', '--matrix_lr=0.037284843565957015', '--max_seq_len=3996', '--num_iterations=-2', '--resume_from_step=0', '--run=nanobot-d16', '--sample_every=3354', '--save_every=0', '--scalar_lr=0.7085520268111714', '--target_flops=-1', '--target_param_data_ratio=15.241394520321814', '--total_batch_size=0', '--unembedding_lr=0.004202948830766023', '--warmdown_ratio=0.7336642245624083', '--warmup_steps=29', '--weight_decay=0.514728986679277', '--window_pattern=SSSL']' returned non-zero exit status 2.
+2026-03-19 09:22:10,656 - wandb.wandb_agent - INFO - Running runs: ['kc8h8fi3']
+2026-03-19 09:22:10,656 - wandb.wandb_agent - INFO - Cleaning up finished run: kc8h8fi3
+2026-03-19 09:22:12,468 - wandb.wandb_agent - INFO - Agent received command: run
+2026-03-19 09:22:12,468 - wandb.wandb_agent - INFO - Agent starting run with config:
+	aspect_ratio: 47
+	core_metric_every: 1172
+	core_metric_max_per_task: 454
+	depth: 20
+	device_batch_size: 30
+	device_type: 
+	embedding_lr: 0.5352891842548186
+	eval_every: 283
+	eval_tokens: 28216469
+	final_lr_frac: 0.08586618557830061
+	fp8: false
+	fp8_recipe: tensorwise
+	head_dim: 151
+	matrix_lr: 0.02774939702933648
+	max_seq_len: 2967
+	num_iterations: 0
+	resume_from_step: 0
+	run: nanobot-d16
+	sample_every: 1906
+	save_every: -2
+	scalar_lr: 0.5615394996330665
+	target_flops: 0
+	target_param_data_ratio: 8.533728228641717
+	total_batch_size: 0
+	unembedding_lr: 0.009243476855145486
+	warmdown_ratio: 0.7803884697841037
+	warmup_steps: 33
+	weight_decay: 0.4592799181504144
+	window_pattern: SSSL
+2026-03-19 09:22:12,470 - wandb.wandb_agent - INFO - About to run command: /usr/bin/env python train.py --aspect_ratio=47 --core_metric_every=1172 --core_metric_max_per_task=454 --depth=20 --device_batch_size=30 --device_type= --embedding_lr=0.5352891842548186 --eval_every=283 --eval_tokens=28216469 --final_lr_frac=0.08586618557830061 --fp8=false --fp8_recipe=tensorwise --head_dim=151 --matrix_lr=0.02774939702933648 --max_seq_len=2967 --num_iterations=0 --resume_from_step=0 --run=nanobot-d16 --sample_every=1906 --save_every=-2 --scalar_lr=0.5615394996330665 --target_flops=0 --target_param_data_ratio=8.533728228641717 --total_batch_size=0 --unembedding_lr=0.009243476855145486 --warmdown_ratio=0.7803884697841037 --warmup_steps=33 --weight_decay=0.4592799181504144 --window_pattern=SSSL
+============================================================
+nanochat base_train
+============================================================
+usage: base_train.py [-h] [--run RUN] [--wandb-entity WANDB_ENTITY]
+                     [--wandb-project WANDB_PROJECT]
+                     [--device-type DEVICE_TYPE] [--fp8]
+                     [--fp8-recipe {rowwise,tensorwise}] [--depth DEPTH]
+                     [--aspect-ratio ASPECT_RATIO] [--head-dim HEAD_DIM]
+                     [--max-seq-len MAX_SEQ_LEN] [--dropout DROPOUT]
+                     [--lora-rank LORA_RANK] [--lora-alpha LORA_ALPHA]
+                     [--window-pattern WINDOW_PATTERN]
+                     [--num-iterations NUM_ITERATIONS] [--epochs EPOCHS]
+                     [--target-flops TARGET_FLOPS]
+                     [--target-param-data-ratio TARGET_PARAM_DATA_RATIO]
+                     [--optimizer-type {muon,adamw}] [--user-data USER_DATA]
+                     [--device-batch-size DEVICE_BATCH_SIZE]
+                     [--total-batch-size TOTAL_BATCH_SIZE]
+                     [--embedding-lr EMBEDDING_LR]
+                     [--unembedding-lr UNEMBEDDING_LR]
+                     [--weight-decay WEIGHT_DECAY] [--matrix-lr MATRIX_LR]
+                     [--scalar-lr SCALAR_LR] [--warmup-steps WARMUP_STEPS]
+                     [--warmdown-ratio WARMDOWN_RATIO]
+                     [--final-lr-frac FINAL_LR_FRAC]
+                     [--resume-from-step RESUME_FROM_STEP]
+                     [--eval-every EVAL_EVERY] [--eval-tokens EVAL_TOKENS]
+                     [--core-metric-every CORE_METRIC_EVERY]
+                     [--core-metric-max-per-task CORE_METRIC_MAX_PER_TASK]
+                     [--sample-every SAMPLE_EVERY] [--save-every SAVE_EVERY]
+                     [--model-tag MODEL_TAG]
+base_train.py: error: argument --fp8: ignored explicit argument 'false'
+Traceback (most recent call last):
+  File "/home/keef/nanochatkwizzle/train.py", line 7, in <module>
+    subprocess.run(cmd, check=True)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/keef/anaconda3/lib/python3.13/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/home/keef/anaconda3/bin/python', '-m', 'scripts.base_train', '--aspect_ratio=47', '--core_metric_every=1172', '--core_metric_max_per_task=454', '--depth=20', '--device_batch_size=30', '--device_type=', '--embedding_lr=0.5352891842548186', '--eval_every=283', '--eval_tokens=28216469', '--final_lr_frac=0.08586618557830061', '--fp8=false', '--fp8_recipe=tensorwise', '--head_dim=151', '--matrix_lr=0.02774939702933648', '--max_seq_len=2967', '--num_iterations=0', '--resume_from_step=0', '--run=nanobot-d16', '--sample_every=1906', '--save_every=-2', '--scalar_lr=0.5615394996330665', '--target_flops=0', '--target_param_data_ratio=8.533728228641717', '--total_batch_size=0', '--unembedding_lr=0.009243476855145486', '--warmdown_ratio=0.7803884697841037', '--warmup_steps=33', '--weight_decay=0.4592799181504144', '--window_pattern=SSSL']' returned non-zero exit status 2.
+2026-03-19 09:22:17,480 - wandb.wandb_agent - INFO - Running runs: ['8jyfda9v']
+2026-03-19 09:22:17,481 - wandb.wandb_agent - ERROR - Detected 3 failed runs in the first 60 seconds, shutting down.
+2026-03-19 09:22:17,481 - wandb.wandb_agent - INFO - To disable this check set WANDB_AGENT_DISABLE_FLAPPING=true
+wandb: Terminating and syncing runs. Press ctrl-c to kill.

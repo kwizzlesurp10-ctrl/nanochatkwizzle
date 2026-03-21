@@ -526,6 +526,7 @@ async def log_feedback(request: FeedbackRequest):
     analytics_path = "analytics.jsonl"
     try:
         with open(analytics_path, "a", encoding="utf-8") as f:
+            import datetime
             log_entry = {
                 "event": "feedback",
                 "session_id": request.session_id,
@@ -533,11 +534,8 @@ async def log_feedback(request: FeedbackRequest):
                 "feedback": request.feedback,
                 "ab_group": request.ab_group,
                 "model": request.model,
-                "timestamp": torch.utils.benchmark.timer().timeit(1).times[0] if hasattr(torch.utils, 'benchmark') else 0 # Dummy timestamp or use datetime
+                "timestamp": datetime.datetime.now().isoformat(),
             }
-            # Use datetime instead
-            import datetime
-            log_entry["timestamp"] = datetime.datetime.now().isoformat()
             f.write(json.dumps(log_entry) + "\n")
         logger.info(f"Logged feedback: {request.feedback} for session {request.session_id}")
         return {"status": "ok"}
@@ -723,13 +721,14 @@ async def chat_completions(request: ChatRequest):
                     yield chunk
             finally:
                 duration = time.time() - start_time
+                tps = token_count / duration if duration > 0 else 0.0
                 full_response = "".join(response_tokens)
                 logger.info(f"[ASSISTANT] (Ollama {args.ollama_chat_model}): {full_response}")
-                logger.info(f"Stats: {token_count} tokens, {duration:.2f}s, {token_count/duration:.2f} tok/s")
+                logger.info(f"Stats: {token_count} tokens, {duration:.2f}s, {tps:.2f} tok/s")
                 logger.info("=" * 20)
                 
                 # Log to analytics
-                log_metric_internal(session_id, "tokens_per_second", token_count/duration if duration > 0 else 0, ab_group, args.ollama_chat_model)
+                log_metric_internal(session_id, "tokens_per_second", tps, ab_group, args.ollama_chat_model)
                 log_metric_internal(session_id, "total_tokens", token_count, ab_group, args.ollama_chat_model)
                 log_metric_internal(session_id, "generation_time", duration, ab_group, args.ollama_chat_model)
 
@@ -809,14 +808,15 @@ async def chat_completions(request: ChatRequest):
                     yield chunk
             finally:
                 duration = time.time() - start_time
+                tps = token_count / duration if duration > 0 else 0.0
                 # Log the assistant response to console
                 full_response = "".join(response_tokens)
                 logger.info(f"[ASSISTANT] (GPU {worker.gpu_id}): {full_response}")
-                logger.info(f"Stats: {token_count} tokens, {duration:.2f}s, {token_count/duration:.2f} tok/s")
+                logger.info(f"Stats: {token_count} tokens, {duration:.2f}s, {tps:.2f} tok/s")
                 logger.info("="*20)
                 
                 # Log to analytics
-                log_metric_internal(session_id, "tokens_per_second", token_count/duration if duration > 0 else 0, ab_group, model_name)
+                log_metric_internal(session_id, "tokens_per_second", tps, ab_group, model_name)
                 log_metric_internal(session_id, "total_tokens", token_count, ab_group, model_name)
                 log_metric_internal(session_id, "generation_time", duration, ab_group, model_name)
                 
