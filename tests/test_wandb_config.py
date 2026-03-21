@@ -8,7 +8,7 @@ if str(_repo_root) not in sys.path:
 
 import pytest
 
-from nanochat.common import resolve_wandb_init_kwargs
+from nanochat.common import DummyWandb, resolve_wandb_init_kwargs
 
 
 def test_resolve_wandb_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -39,6 +39,13 @@ def test_resolve_wandb_empty_entity_becomes_none(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setenv("WANDB_ENTITY", "   ")
     kw = resolve_wandb_init_kwargs("nanochat")
     assert kw["entity"] is None
+
+
+def test_dummy_wandb_config_and_finish() -> None:
+    w = DummyWandb({"x": 1})
+    assert dict(w.config) == {"x": 1}
+    w.finish(exit_code=1)
+    assert dict(DummyWandb().config) == {}
 
 
 if __name__ == "__main__":

@@ -262,5 +262,12 @@ def resolve_wandb_artifact_full_name(
 
 
 class DummyWandb:
+    def __init__(self, config=None):
+        self._config = dict(config) if config is not None else {}
+
+    @property
+    def config(self):
+        return self._config
+
     def log(self, d): pass
-    def finish(self): pass
+    def finish(self, *args, **kwargs): pass

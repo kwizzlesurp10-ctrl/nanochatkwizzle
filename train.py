@@ -4,7 +4,13 @@ import sys
 import torch
 import wandb
 import argparse
-from nanochat.common import estimate_model_vram, autodetect_device_type, COMPUTE_DTYPE
+from nanochat.common import (
+    estimate_model_vram,
+    autodetect_device_type,
+    COMPUTE_DTYPE,
+    DummyWandb,
+    resolve_wandb_init_kwargs,
+)
 
 def validate_config(config):
     """Check if the configuration is likely to fit in VRAM."""
@@ -63,7 +69,20 @@ if __name__ == "__main__":
 
     # 2. Start a wandb run to get the FULL config (especially if running in a sweep)
     # If in a sweep, wandb.init() will merge the sweep config into what we provide.
-    run = wandb.init(config=user_config)
+    if user_config.get("run") == "dummy":
+        run = DummyWandb(user_config)
+    else:
+        try:
+            _wandb_kw = resolve_wandb_init_kwargs("nanochat")
+            run = wandb.init(
+                name=user_config["run"],
+                config=user_config,
+                reinit=True,
+                **_wandb_kw,
+            )
+        except Exception as e:
+            print(f"wandb.init failed ({e}), using DummyWandb")
+            run = DummyWandb(user_config)
     full_config = dict(run.config)
     
     # 3. Pre-flight validation
