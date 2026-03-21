@@ -11,28 +11,17 @@ torchrun --standalone --nproc_per_node=8 -m scripts.chat_sft -- --device-batch-s
 
 import gc
 import argparse
-import json
 import os
-import sys
 import time
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
-# #region agent log
-_DEBUG_LOG = "/home/keef/nanochatkwizzle/.cursor/debug-25bf98.log"
-def _dlog(msg, data=None, hid="?"):
-    try:
-        with open(_DEBUG_LOG, "a") as _f:
-            _f.write(json.dumps({"sessionId": "25bf98", "location": "chat_sft.py", "message": msg, "data": data or {}, "timestamp": int(time.time() * 1000), "hypothesisId": hid}) + "\n")
-    except Exception:
-        pass
-# #endregion
 import wandb
 import torch
-from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized
+from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized, resolve_wandb_init_kwargs
 from nanochat.tokenizer import get_token_bytes
 from nanochat.checkpoint_manager import save_checkpoint, load_model, load_optimizer_state
 from nanochat.loss_eval import evaluate_bpb
 import torch.distributed as dist
-from nanochat.flash_attention import HAS_FA3
+from nanochat.flash_attention import USE_FA3
 from nanochat.engine import Engine
 from scripts.chat_eval import run_chat_eval
 
@@ -48,6 +37,8 @@ from tasks.spellingbee import SimpleSpelling, SpellingBee
 parser = argparse.ArgumentParser(description="Supervised fine-tuning (SFT) the model")
 # Logging
 parser.add_argument("--run", type=str, default="dummy", help="wandb run name ('dummy' disables wandb logging)")
+parser.add_argument("--wandb-entity", type=str, default=None, help="wandb entity/team (default: WANDB_ENTITY env, else account default)")
+parser.add_argument("--wandb-project", type=str, default=None, help="wandb project (default: WANDB_PROJECT env or nanochat-sft)")
 # Runtime
 parser.add_argument("--device-type", type=str, default="", help="cuda|cpu|mps (empty = autodetect)")
 # Model loading
@@ -59,12 +50,14 @@ parser.add_argument("--num-iterations", type=int, default=-1, help="number of op
 parser.add_argument("--max-walltime-seconds", type=int, default=-1, help="stop after this many seconds of training (-1 = no limit)")
 # Batch sizes (default: inherit from pretrained checkpoint)
 parser.add_argument("--max-seq-len", type=int, default=None, help="max context length (default: inherit from pretrain)")
-parser.add_argument("--device-batch-size", type=int, default=None, help="per-device batch size (default: inherit from pretrain)")
+parser.add_argument("--device-batch-size", "--batch-size", type=int, default=None, help="per-device batch size (default: inherit from pretrain)")
 parser.add_argument("--total-batch-size", type=int, default=None, help="total batch size in tokens (default: inherit from pretrain)")
 # Optimization (default: inherit from pretrained checkpoint)
+parser.add_argument("--learning-rate", type=float, default=None, help="base learning rate (if provided, overrides individual LRs)")
 parser.add_argument("--embedding-lr", type=float, default=None, help="learning rate for embedding parameters (Adam) (default: inherit from pretrain)")
 parser.add_argument("--unembedding-lr", type=float, default=None, help="learning rate for unembedding parameters (Adam) (default: inherit from pretrain)")
 parser.add_argument("--matrix-lr", type=float, default=None, help="learning rate for matrix parameters (Muon) (default: inherit from pretrain)")
+parser.add_argument("--optimizer", type=str, default="muon", choices=["muon", "adamw"], help="optimizer type: 'muon' (default) or 'adamw'")
 parser.add_argument("--init-lr-frac", type=float, default=0.8, help="initial LR as fraction of base LR")
 parser.add_argument("--warmup-ratio", type=float, default=0.0, help="ratio of iterations for LR warmup")
 parser.add_argument("--warmdown-ratio", type=float, default=0.5, help="ratio of iterations for LR warmdown")
@@ -78,15 +71,7 @@ parser.add_argument("--chatcore-max-sample", type=int, default=24, help="max pro
 # Data mixture
 parser.add_argument("--mmlu-epochs", type=int, default=3, help="number of epochs of MMLU in training mixture (teaches Multiple Choice)")
 parser.add_argument("--gsm8k-epochs", type=int, default=4, help="number of epochs of GSM8K in training mixture (teaches Math and Tool Use)")
-# #region agent log
-_dlog("script_start", {"argv_len": len(sys.argv), "argv_tail": sys.argv[-5:] if len(sys.argv) >= 5 else sys.argv}, "start")
-try:
-    args = parser.parse_args()
-except Exception as e:
-    _dlog("parse_args_failed", {"error": str(e), "type": type(e).__name__}, "A")
-    raise
-_dlog("parse_args_ok", {}, "A")
-# #endregion
+args = parser.parse_args()
 user_config = vars(args).copy()
 # -----------------------------------------------------------------------------
 
@@ -106,14 +91,14 @@ else:
 
 # wandb logging init
 use_dummy_wandb = args.run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-sft", name=args.run, config=user_config)
+_wandb_kw = resolve_wandb_init_kwargs("nanochat-sft", args.wandb_entity, args.wandb_project)
+wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(name=args.run, config=user_config, **_wandb_kw)
 
-# Flash Attention status
-if not HAS_FA3:
-    print0("WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback. Training will be less efficient.")
-
-# Load the model and tokenizer
+# Load the model and tokenizer (build_model may coerce window_pattern to L when using SDPA)
 model, tokenizer, meta = load_model("base", device, phase="train", model_tag=args.model_tag, step=args.model_step)
+
+if not USE_FA3:
+    print0("Attention: PyTorch SDPA (FA3 requires Hopper sm90+ with bf16).")
 
 # Inherit training hyperparameters from pretrained checkpoint (None = inherit, explicit value = override)
 pretrain_user_config = meta.get("user_config", {})
@@ -136,6 +121,14 @@ for name, fallback, source in [
     else:
         print0(f"Using {name}={arg_val}")
 
+if args.learning_rate is not None:
+    # If learning_rate is provided, we use it to override individual LRs.
+    # We maintain relative ratios common in SFT: matrix=1x, embedding=1x, unembedding=0.1x
+    args.matrix_lr = args.learning_rate
+    args.embedding_lr = args.learning_rate
+    args.unembedding_lr = args.learning_rate * 0.1
+    print0(f"Overriding individual LRs with base learning-rate {args.learning_rate}: matrix={args.matrix_lr}, embedding={args.embedding_lr}, unembedding={args.unembedding_lr}")
+
 orig_model = model
 model = torch.compile(model, dynamic=False)
 depth = model.config.n_layer
@@ -151,7 +144,7 @@ token_bytes = get_token_bytes(device=device)
 
 # Initialize the Optimizer (combined MuonAdamW: Muon for matrix params, AdamW for rest)
 # Note that pretraining ramps weight_decay to zero by end of pretraining, so SFT continues with zero
-optimizer = model.setup_optimizer(unembedding_lr=args.unembedding_lr, embedding_lr=args.embedding_lr, matrix_lr=args.matrix_lr, weight_decay=0.0)
+optimizer = model.setup_optimizer(unembedding_lr=args.unembedding_lr, embedding_lr=args.embedding_lr, matrix_lr=args.matrix_lr, weight_decay=0.0, optimizer_type=args.optimizer)
 
 # Optionally warm-start optimizer from pretrained checkpoint (momentum buffers etc.)
 # Note: load_state_dict overwrites param_group metadata (LRs, betas, etc.) with the

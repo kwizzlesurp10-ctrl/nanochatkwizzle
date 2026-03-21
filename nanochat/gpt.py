@@ -14,6 +14,7 @@ Notable features:
 
 from functools import partial
 from dataclasses import dataclass
+import math
 
 import torch
 import torch.nn as nn
@@ -33,6 +34,10 @@ class GPTConfig:
     n_head: int = 6 # number of query heads
     n_kv_head: int = 6 # number of key/value heads (GQA)
     n_embd: int = 768
+    dropout: float = 0.0
+    # LoRA parameters
+    lora_rank: int = 0 # 0 means disabled
+    lora_alpha: int = 16
     # Sliding window attention pattern string, tiled across layers. Final layer always L.
     # Characters: L=long (full context), S=short (quarter context)
     # Examples: "L"=all full context, "SL"=alternating, "SSL"=two short then one long
@@ -45,9 +50,28 @@ def norm(x):
 class Linear(nn.Linear):
     """nn.Linear that casts weights to match input dtype in forward.
     Replaces autocast: master weights stay fp32 for optimizer precision,
-    but matmuls run in the activation dtype (typically bf16 from embeddings)."""
+    but matmuls run in the activation dtype (typically bf16 from embeddings).
+    Optionally supports LoRA (Low-Rank Adaptation)."""
+    
+    def __init__(self, in_features, out_features, bias=False, lora_rank=0, lora_alpha=1):
+        super().__init__(in_features, out_features, bias=bias)
+        self.lora_rank = lora_rank
+        self.lora_alpha = lora_alpha
+        if lora_rank > 0:
+            self.lora_A = nn.Parameter(torch.empty((lora_rank, in_features)))
+            self.lora_B = nn.Parameter(torch.empty((out_features, lora_rank)))
+            self.scaling = lora_alpha / lora_rank
+            # LoRA weights initialization
+            nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
+            nn.init.zeros_(self.lora_B)
+
     def forward(self, x):
-        return F.linear(x, self.weight.to(dtype=x.dtype))
+        res = F.linear(x, self.weight.to(dtype=x.dtype))
+        if self.lora_rank > 0:
+            # LoRA path: (x @ A.T) @ B.T
+            lora_out = (x @ self.lora_A.to(dtype=x.dtype).t()) @ self.lora_B.to(dtype=x.dtype).t()
+            res = res + lora_out * self.scaling
+        return res
 
 
 def has_ve(layer_idx, n_layer):
@@ -72,10 +96,11 @@ class CausalSelfAttention(nn.Module):
         self.head_dim = self.n_embd // self.n_head
         assert self.n_embd % self.n_head == 0
         assert self.n_kv_head <= self.n_head and self.n_head % self.n_kv_head == 0
-        self.c_q = Linear(self.n_embd, self.n_head * self.head_dim, bias=False)
-        self.c_k = Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False)
-        self.c_v = Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False)
-        self.c_proj = Linear(self.n_embd, self.n_embd, bias=False)
+        self.c_q = Linear(self.n_embd, self.n_head * self.head_dim, bias=False, lora_rank=config.lora_rank, lora_alpha=config.lora_alpha)
+        self.c_k = Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False, lora_rank=config.lora_rank, lora_alpha=config.lora_alpha)
+        self.c_v = Linear(self.n_embd, self.n_kv_head * self.head_dim, bias=False, lora_rank=config.lora_rank, lora_alpha=config.lora_alpha)
+        self.c_proj = Linear(self.n_embd, self.n_embd, bias=False, lora_rank=config.lora_rank, lora_alpha=config.lora_alpha)
+        self.dropout = nn.Dropout(config.dropout)
         self.ve_gate_channels = 12
         self.ve_gate = Linear(self.ve_gate_channels, self.n_kv_head, bias=False) if has_ve(layer_idx, config.n_layer) else None
 
@@ -122,7 +147,7 @@ class CausalSelfAttention(nn.Module):
 
         # Re-assemble the heads and project back to residual stream
         y = y.contiguous().view(B, T, -1)
-        y = self.c_proj(y)
+        y = self.dropout(self.c_proj(y))
         return y
 
 
@@ -131,11 +156,12 @@ class MLP(nn.Module):
         super().__init__()
         self.c_fc = Linear(config.n_embd, 4 * config.n_embd, bias=False)
         self.c_proj = Linear(4 * config.n_embd, config.n_embd, bias=False)
+        self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x):
         x = self.c_fc(x)
         x = F.relu(x).square()
-        x = self.c_proj(x)
+        x = self.dropout(self.c_proj(x))
         return x
 
 
@@ -306,6 +332,12 @@ class GPT(nn.Module):
         window_sizes[-1] = (long_window, 0)
         return window_sizes
 
+    def set_window_pattern(self, pattern: str) -> None:
+        p = pattern.upper().strip()
+        assert all(c in "SL" for c in p), f"Invalid window_pattern: {pattern!r}. Use only S and L."
+        self.config.window_pattern = p
+        self.window_sizes = self._compute_window_sizes(self.config)
+
     def get_device(self):
         return self.transformer.wte.weight.device
 
@@ -366,7 +398,7 @@ class GPT(nn.Module):
             'total': total,
         }
 
-    def setup_optimizer(self, unembedding_lr=0.004, embedding_lr=0.2, matrix_lr=0.02, weight_decay=0.0, scalar_lr=0.5):
+    def setup_optimizer(self, unembedding_lr=0.004, embedding_lr=0.2, matrix_lr=0.02, weight_decay=0.0, scalar_lr=0.5, optimizer_type="muon"):
         model_dim = self.config.n_embd
         ddp, rank, local_rank, world_size = get_dist_info()
 
@@ -397,10 +429,17 @@ class GPT(nn.Module):
         # Muon groups (matrix params, grouped by shape for stacking)
         for shape in sorted({p.shape for p in matrix_params}):
             group_params = [p for p in matrix_params if p.shape == shape]
-            param_groups.append(dict(
-                kind='muon', params=group_params, lr=matrix_lr,
-                momentum=0.95, ns_steps=5, beta2=0.9, weight_decay=weight_decay,
-            ))
+            if optimizer_type == "muon":
+                param_groups.append(dict(
+                    kind='muon', params=group_params, lr=matrix_lr,
+                    momentum=0.95, ns_steps=5, beta2=0.9, weight_decay=weight_decay,
+                ))
+            else:
+                # If using AdamW for everything, use matrix_lr but AdamW kind
+                param_groups.append(dict(
+                    kind='adamw', params=group_params, lr=matrix_lr,
+                    betas=(0.9, 0.95), eps=1e-10, weight_decay=weight_decay,
+                ))
 
         Factory = DistMuonAdamW if ddp else MuonAdamW
         optimizer = Factory(param_groups)

@@ -1,11 +1,20 @@
 """
 Utilities for saving and loading model/optim/state checkpoints.
 """
+from pathlib import Path
+import sys
+
+_repo_root = Path(__file__).resolve().parents[1]
+_root_s = str(_repo_root)
+if _root_s not in sys.path:
+    sys.path.insert(0, _root_s)
+
 import os
 import re
 import glob
 import json
 import logging
+import shutil
 import torch
 
 from nanochat.common import get_base_dir, get_checkpoint_base_dir
@@ -51,6 +60,16 @@ def save_checkpoint(checkpoint_dir, step, model_data, optimizer_data, meta_data,
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta_data, f, indent=2)
         logger.info(f"Saved metadata to: {meta_path}")
+        # Copy the tokenizer directory to ensure it stays matched with the model
+        base_dir = get_base_dir()
+        src_tokenizer_dir = os.path.join(base_dir, "tokenizer")
+        dst_tokenizer_dir = os.path.join(checkpoint_dir, "tokenizer")
+        if os.path.exists(src_tokenizer_dir):
+            if os.path.exists(dst_tokenizer_dir):
+                shutil.rmtree(dst_tokenizer_dir)
+            shutil.copytree(src_tokenizer_dir, dst_tokenizer_dir)
+            logger.info(f"Copied tokenizer to: {dst_tokenizer_dir}")
+
     # Note that optimizer state is sharded across ranks, so each rank must save its own.
     if optimizer_data is not None:
         os.makedirs(checkpoint_dir, exist_ok=True)
@@ -108,10 +127,20 @@ def build_model(checkpoint_dir, step, device, phase):
         model.eval()
     else:
         model.train()
-    # Load the Tokenizer
-    tokenizer = get_tokenizer()
-    # Sanity check: compatibility between model and tokenizer
-    assert tokenizer.get_vocab_size() == model_config_kwargs["vocab_size"], f"Tokenizer vocab size {tokenizer.get_vocab_size()} does not match model config vocab size {model_config_kwargs['vocab_size']}"
+    try:
+        from nanochat.flash_attention import USE_FA3
+
+        if not USE_FA3 and any(c == "S" for c in model.config.window_pattern.upper()):
+            prev = model.config.window_pattern
+            model.set_window_pattern("L")
+            log0(f"window_pattern '{prev}' -> 'L' (SDPA path: full attention is faster than sliding-window emulation here).")
+    except Exception:
+        pass
+    expected_v = model_config_kwargs["vocab_size"]
+    # Try loading tokenizer from checkpoint directory first, then fallback to global cache
+    checkpoint_tokenizer_dir = os.path.join(checkpoint_dir, "tokenizer")
+    tokenizer = get_tokenizer(tokenizer_dir=checkpoint_tokenizer_dir, expected_vocab_size=expected_v)
+    assert tokenizer.get_vocab_size() == expected_v
     return model, tokenizer, meta_data
 
 

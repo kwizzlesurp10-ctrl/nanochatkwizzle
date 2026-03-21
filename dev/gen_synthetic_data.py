@@ -100,14 +100,14 @@ topics = {
         "is nanochat good for production use",
     ],
     "comparisons": [
-        "how does nanochat compare to GPT-2",
+        "how does nanochat compare to other small LLMs",
         "how does nanochat compare to ChatGPT/GPT-4",
         "how does nanochat compare to Claude",
-        "why is training 600x cheaper than GPT-2",
+        "why is training cheaper than historical large LM runs",
         "what's special about nanochat vs other open models",
     ],
     "history": [
-        "the GPT-2 training cost in 2019",
+        "historical LLM training costs",
         "how AI training costs have dropped over time",
         "relationship to modded-nanogpt project",
         "what optimizations worked vs didn't work",

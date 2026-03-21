@@ -160,16 +160,14 @@ all_text = [
 if val_text:
     all_text.append(("fwe-val", val_text))
 
-# Try out current default compared to GPT-2 and GPT-4 tokenizers
+# Compare trained tokenizer to a common reference (cl100k)
 tokenizer_results = {}
 vocab_sizes = {}
 
-for tokenizer_name in ["gpt2", "gpt4", "ours"]:
+for tokenizer_name in ["cl100k", "ours"]:
 
-    if tokenizer_name == "gpt2":
-        tokenizer = RustBPETokenizer.from_pretrained("gpt2") # gpt-2 base model tokenizer
-    elif tokenizer_name == "gpt4":
-        tokenizer = RustBPETokenizer.from_pretrained("cl100k_base") # gpt-4 base model tokenizer
+    if tokenizer_name == "cl100k":
+        tokenizer = RustBPETokenizer.from_pretrained("cl100k_base")
     else:
         tokenizer = get_tokenizer()
 
@@ -196,8 +194,7 @@ RESET = '\033[0m'
 
 # Print vocab sizes
 print(f"\nVocab sizes:")
-print(f"GPT-2: {vocab_sizes['gpt2']}")
-print(f"GPT-4: {vocab_sizes['gpt4']}")
+print(f"cl100k (reference): {vocab_sizes['cl100k']}")
 print(f"Ours: {vocab_sizes['ours']}")
 
 def print_comparison(baseline_name, baseline_results, ours_results, all_text):
@@ -239,14 +236,12 @@ def print_comparison(baseline_name, baseline_results, ours_results, all_text):
               f"{better:<10}")
 
 # Print comparisons
-print_comparison("GPT-2", tokenizer_results['gpt2'], tokenizer_results['ours'], all_text)
-print_comparison("GPT-4", tokenizer_results['gpt4'], tokenizer_results['ours'], all_text)
+print_comparison("cl100k", tokenizer_results["cl100k"], tokenizer_results["ours"], all_text)
 
 # Log to report
 from nanochat.report import get_report
 lines = []
-for baseline_name in ["GPT-2", "GPT-4"]:
-    baseline_key = baseline_name.lower().replace('-', '')
+for baseline_name, baseline_key in [("cl100k", "cl100k")]:
     baseline_results = tokenizer_results[baseline_key]
     ours_results = tokenizer_results['ours']
     lines.append(f"### Comparison with {baseline_name}")

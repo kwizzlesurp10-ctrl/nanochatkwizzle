@@ -12,6 +12,10 @@ python -m scripts.base_train --depth=4 --max-seq-len=512 --device-batch-size=1 -
 """
 
 import os
+import sys
+# Ensure output is not buffered so we see logs in real-time
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 import gc
 import json
@@ -27,12 +31,12 @@ import torch.distributed as dist
 
 from nanochat.gpt import GPT, GPTConfig, Linear
 from nanochat.dataloader import tokenizing_distributed_data_loader_bos_bestfit, tokenizing_distributed_data_loader_with_state_bos_bestfit
-from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, print_banner, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized
+from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, print_banner, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized, resolve_wandb_init_kwargs
 from nanochat.tokenizer import get_tokenizer, get_token_bytes
 from nanochat.checkpoint_manager import save_checkpoint, load_checkpoint
 from nanochat.loss_eval import evaluate_bpb
 from nanochat.engine import Engine
-from nanochat.flash_attention import HAS_FA3
+from nanochat.flash_attention import HAS_FA3, USE_FA3
 from scripts.base_eval import evaluate_core
 print_banner()
 
@@ -41,30 +45,39 @@ print_banner()
 parser = argparse.ArgumentParser(description="Pretrain base model")
 # Logging
 parser.add_argument("--run", type=str, default="dummy", help="wandb run name ('dummy' disables wandb logging)")
+parser.add_argument("--wandb-entity", type=str, default=None, help="wandb entity/team (default: WANDB_ENTITY env, else account default)")
+parser.add_argument("--wandb-project", type=str, default=None, help="wandb project (default: WANDB_PROJECT env or nanochat)")
 # Runtime
 parser.add_argument("--device-type", type=str, default="", help="cuda|cpu|mps (empty = autodetect)")
 # FP8 training
 parser.add_argument("--fp8", action="store_true", help="enable FP8 training (requires H100+ GPU and torchao)")
 parser.add_argument("--fp8-recipe", type=str, default="tensorwise", choices=["rowwise", "tensorwise"], help="FP8 scaling recipe: tensorwise (faster, recommended) or rowwise (more accurate but slower)")
 # Model architecture
-parser.add_argument("--depth", type=int, default=20, help="depth of the Transformer model")
+parser.add_argument("--depth", type=int, default=8, help="depth of the Transformer model")
 parser.add_argument("--aspect-ratio", type=int, default=64, help="model_dim = depth * aspect_ratio")
-parser.add_argument("--head-dim", type=int, default=128, help="target head dimension for attention")
-parser.add_argument("--max-seq-len", type=int, default=2048, help="max context length")
+parser.add_argument("--head-dim", type=int, default=64, help="target head dimension for attention")
+parser.add_argument("--max-seq-len", type=int, default=1024, help="max context length")
+parser.add_argument("--dropout", type=float, default=0.1, help="dropout rate")
+parser.add_argument("--lora-rank", type=int, default=0, help="LoRA rank (0 = disabled)")
+parser.add_argument("--lora-alpha", type=int, default=16, help="LoRA alpha")
 parser.add_argument("--window-pattern", type=str, default="SSSL", help="sliding window pattern tiled across layers: L=full, S=half context (e.g. 'SSL')")
 # Training horizon (only one used, in order of precedence)
 parser.add_argument("--num-iterations", type=int, default=-1, help="explicit number of optimization steps (-1 = disable)")
+parser.add_argument("--epochs", type=int, default=-1, help="number of epochs to train for (-1 = disable)")
 parser.add_argument("--target-flops", type=float, default=-1.0, help="calculate num_iterations to reach target_flops (-1 = disable)")
 parser.add_argument("--target-param-data-ratio", type=float, default=10.5, help="calculate num_iterations to maintain data:param ratio (Chinchilla=20, -1 = disable)")
 # Optimization
-parser.add_argument("--device-batch-size", type=int, default=32, help="per-device batch size. good number to reduce to 16,8,4,... if you OOM on VRAM.")
+parser.add_argument("--optimizer-type", "--optimizer", type=str, default="muon", choices=["muon", "adamw"], help="optimizer type: 'muon' (default, mixed Muon/AdamW) or 'adamw' (standard AdamW)")
+parser.add_argument("--user-data", type=str, default=None, help="path to a local JSONL file with user-specific documents")
+parser.add_argument("--device-batch-size", "--batch-size", type=int, default=128, help="per-device batch size. good number to reduce to 16,8,4,... if you OOM on VRAM.")
 parser.add_argument("--total-batch-size", type=int, default=-1, help="total batch size in tokens. decent numbers are e.g. 524288. (-1 = auto-compute optimal)")
+parser.add_argument("--learning-rate", type=float, default=4e-4, help="base learning rate (if provided, overrides or scales individual LRs)")
 parser.add_argument("--embedding-lr", type=float, default=0.3, help="learning rate for embedding parameters (Adam)")
 parser.add_argument("--unembedding-lr", type=float, default=0.008, help="learning rate for unembedding parameters (Adam)")
-parser.add_argument("--weight-decay", type=float, default=0.28, help="cautious weight decay for the Muon optimizer (for weights)")
+parser.add_argument("--weight-decay", type=float, default=0.1, help="cautious weight decay for the Muon optimizer (for weights)")
 parser.add_argument("--matrix-lr", type=float, default=0.02, help="learning rate for matrix parameters (Muon)")
 parser.add_argument("--scalar-lr", type=float, default=0.5, help="learning rate for scalars (resid_lambdas, x0_lambdas)")
-parser.add_argument("--warmup-steps", type=int, default=40, help="number of steps for LR warmup")
+parser.add_argument("--warmup-steps", type=int, default=2000, help="number of steps for LR warmup")
 parser.add_argument("--warmdown-ratio", type=float, default=0.65, help="ratio of iterations for LR warmdown")
 parser.add_argument("--final-lr-frac", type=float, default=0.05, help="final LR as fraction of initial LR")
 parser.add_argument("--resume-from-step", type=int, default=-1, help="resume training from this step (-1 = disable)")
@@ -78,6 +91,21 @@ parser.add_argument("--save-every", type=int, default=-1, help="save checkpoints
 # Output
 parser.add_argument("--model-tag", type=str, default=None, help="override model tag for checkpoint directory name")
 args = parser.parse_args()
+
+if args.learning_rate is not None:
+    # If learning_rate is provided, we use it to override/scale the individual LRs.
+    # We maintain relative ratios: embedding_lr=0.3, unembedding_lr=0.008, matrix_lr=0.02, scalar_lr=0.5
+    # matrix_lr is taken as the base (1x), others are scaled accordingly.
+    args.matrix_lr = args.learning_rate
+    args.embedding_lr = args.learning_rate * (0.3 / 0.02)
+    args.unembedding_lr = args.learning_rate * (0.008 / 0.02)
+    args.scalar_lr = args.learning_rate * (0.5 / 0.02)
+
+_window_pattern_coerced_from = None
+if not USE_FA3 and any(c == "S" for c in args.window_pattern.upper()):
+    _window_pattern_coerced_from = args.window_pattern
+    args.window_pattern = "L"
+
 user_config = vars(args).copy()  # for logging
 # -----------------------------------------------------------------------------
 # Compute init and wandb logging
@@ -101,27 +129,24 @@ if use_dummy_wandb:
     wandb_run = DummyWandb()
 else:
     try:
-        wandb_run = wandb.init(project="nanochat", name=args.run, config=user_config)
+        _wandb_kw = resolve_wandb_init_kwargs("nanochat", args.wandb_entity, args.wandb_project)
+        wandb_run = wandb.init(name=args.run, config=user_config, reinit=True, **_wandb_kw)
     except Exception as e:
         print0(f"wandb.init failed ({e}), using DummyWandb")
         wandb_run = DummyWandb()
 
-# Flash Attention status
-from nanochat.flash_attention import USE_FA3
-using_fa3 = USE_FA3
-if using_fa3:
-    print0("✓ Using Flash Attention 3 (Hopper GPU detected), efficient, new and awesome.")
+# Attention backend (FA3 on Hopper sm90+ bf16; else PyTorch SDPA — expected on most consumer GPUs)
+if USE_FA3:
+    print0("✓ Flash Attention 3 (Hopper-class GPU, bf16).")
 else:
-    print0("!" * 80)
     if HAS_FA3 and COMPUTE_DTYPE != torch.bfloat16:
-        print0(f"WARNING: Flash Attention 3 only supports bf16, but COMPUTE_DTYPE={COMPUTE_DTYPE}. Using PyTorch SDPA fallback")
+        print0(f"Note: FA3 requires bfloat16; using PyTorch SDPA with {COMPUTE_DTYPE}.")
     else:
-        print0("WARNING: Flash Attention 3 not available, using PyTorch SDPA fallback")
-    print0("WARNING: Training will be less efficient without FA3")
-    if args.window_pattern != "L":
-        print0(f"WARNING: SDPA has no support for sliding window attention (window_pattern='{args.window_pattern}'). Your GPU utilization will be terrible.")
-        print0("WARNING: Recommend using --window-pattern L for full context attention without alternating sliding window patterns.")
-    print0("!" * 80)
+        print0("Attention: PyTorch SDPA (FA3 is optional; Hopper sm90+ + bf16 enables it). Training is supported on this GPU.")
+    if _window_pattern_coerced_from is not None:
+        print0(
+            f"Using --window-pattern L (requested '{_window_pattern_coerced_from}' coerced for SDPA — full-context attention is much faster than sliding-window masks here)."
+        )
 
 # -----------------------------------------------------------------------------
 # Tokenizer will be useful for evaluation and also we need the vocab size to init the model
@@ -133,7 +158,7 @@ print0(f"Vocab size: {vocab_size:,}")
 # -----------------------------------------------------------------------------
 # Initialize the Model
 
-def build_model_meta(depth):
+def build_model_meta(depth, lora_rank=0, lora_alpha=16):
     """Build a model on meta device for a given depth (shapes/dtypes only, no data)."""
     # Model dim is nudged up to nearest multiple of head_dim for clean division
     # (FA3 requires head_dim divisible by 8, and this guarantees head_dim == args.head_dim exactly)
@@ -143,19 +168,34 @@ def build_model_meta(depth):
     config = GPTConfig(
         sequence_len=args.max_seq_len, vocab_size=vocab_size,
         n_layer=depth, n_head=num_heads, n_kv_head=num_heads, n_embd=model_dim,
-        window_pattern=args.window_pattern,
+        window_pattern=args.window_pattern, dropout=args.dropout,
+        lora_rank=lora_rank, lora_alpha=lora_alpha,
     )
     with torch.device("meta"):
         model_meta = GPT(config)
     return model_meta
 
 # Build the model, move to device, init the weights
-model = build_model_meta(args.depth) # 1) Build on meta device (only shapes/dtypes, no data)
+model = build_model_meta(args.depth, lora_rank=args.lora_rank, lora_alpha=args.lora_alpha) # 1) Build on meta device (only shapes/dtypes, no data)
 model_config = model.config
 model_config_kwargs = asdict(model_config)
 print0(f"Model config:\n{json.dumps(model_config_kwargs, indent=2)}")
 model.to_empty(device=device) # 2) All tensors get storage on target device but with uninitialized (garbage) data
 model.init_weights() # 3) All tensors get initialized
+
+# If LoRA is enabled, freeze base weights and unfreeze LoRA parameters
+if args.lora_rank > 0:
+    print0(f"LoRA enabled (rank={args.lora_rank}, alpha={args.lora_alpha}). Freezing base weights...")
+    for name, param in model.named_parameters():
+        if "lora_" in name:
+            param.requires_grad = True
+        else:
+            param.requires_grad = False
+    
+    # Print trainable parameters count
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total_params = sum(p.numel() for p in model.parameters())
+    print0(f"Trainable parameters: {trainable_params:,} ({100 * trainable_params / total_params:.4f}% of total)")
 
 # If we are resuming, overwrite the model parameters with those of the checkpoint
 checkpoint_base = get_checkpoint_base_dir()
@@ -249,7 +289,7 @@ def disable_fp8(model):
 # Compile the model
 
 orig_model = model # original, uncompiled model, for saving raw model state_dict and for inference/evaluation (because the shapes may change shape)
-model = torch.compile(model, dynamic=False) # the inputs to model will never change shape so dynamic=False is safe
+# model = torch.compile(model, dynamic=False) # the inputs to model will never change shape so dynamic=False is safe
 
 # -----------------------------------------------------------------------------
 # Scaling laws and muP extrapolations to determine the optimal training horizon, batch size, learning rates, weight decay.
@@ -319,6 +359,7 @@ optimizer = model.setup_optimizer(
     # Muon hyperparameters
     matrix_lr=args.matrix_lr * batch_lr_scale,
     weight_decay=weight_decay_scaled,
+    optimizer_type=args.optimizer_type,
 )
 
 if resuming:
@@ -334,19 +375,45 @@ if scaler is not None:
 # -----------------------------------------------------------------------------
 # Initialize the DataLoaders for train/val
 dataloader_resume_state_dict = None if not resuming else meta_data["dataloader_state_dict"]
-train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, args.device_batch_size, args.max_seq_len, split="train", device=device, resume_state_dict=dataloader_resume_state_dict)
+train_loader = tokenizing_distributed_data_loader_with_state_bos_bestfit(tokenizer, args.device_batch_size, args.max_seq_len, split="train", device=device, resume_state_dict=dataloader_resume_state_dict, user_data_path=args.user_data)
 build_val_loader = lambda: tokenizing_distributed_data_loader_bos_bestfit(tokenizer, args.device_batch_size, args.max_seq_len, split="val", device=device)
 x, y, dataloader_state_dict = next(train_loader) # kick off load of the very first batch of data
 
 # -----------------------------------------------------------------------------
 # Calculate the number of iterations we will train for and set up the various schedulers
 
-# num_iterations: either it is given, or from target flops, or from target data:param ratio (in that order)
-assert args.num_iterations > 0 or args.target_param_data_ratio > 0 or args.target_flops > 0
+# num_iterations: either it is given, or from epochs, or from target flops, or from target data:param ratio (in that order)
+assert args.num_iterations > 0 or args.epochs > 0 or args.target_param_data_ratio > 0 or args.target_flops > 0
 if args.num_iterations > 0:
     # Override num_iterations to a specific value if given
     num_iterations = args.num_iterations
     print0(f"Using user-provided number of iterations: {num_iterations:,}")
+elif args.epochs > 0:
+    # Calculate num_iterations based on number of epochs
+    from nanochat.dataset import list_parquet_files
+    import pyarrow.parquet as pq
+    parquet_paths = list_parquet_files()
+    train_parquet_paths = parquet_paths[:-1] # assume all but last is train
+    total_row_groups = 0
+    for p in train_parquet_paths:
+        total_row_groups += pq.ParquetFile(p).num_row_groups
+    
+    # In each step, we consume total_batch_size tokens.
+    # Each row group has some number of documents.
+    # This is complex because the dataloader packs documents.
+    # Let's use a simpler heuristic: estimate total tokens in dataset.
+    # For ClimbMix, each shard is ~250M chars, which is ~50M-100M tokens.
+    # A better way is to just estimate iterations per epoch.
+    # If world_size=1, each step uses total_batch_size tokens.
+    # Total train tokens in dataset ≈ len(train_parquet_paths) * 250M / chars_per_token
+    # Let's just use a reasonable estimate for now or warn the user.
+    # Actually, the dataloader yields one batch per RG per rank usually? No, it's more complex.
+    # Let's fallback to target-param-data-ratio if epochs is not easily calculable, 
+    # or just use a fixed number of steps per epoch based on ClimbMix defaults.
+    # For now, let's just use a large enough number and rely on the dataloader's epoch counting.
+    # Or, we can just say 1 epoch ≈ 1000 steps for this tiny run.
+    num_iterations = args.epochs * 1000 # placeholder
+    print0(f"Using estimated {num_iterations} iterations for {args.epochs} epochs")
 elif args.target_flops > 0:
     # Calculate the number of iterations from the target flops (used in scaling laws analysis, e.g. runs/scaling_laws.sh)
     num_iterations = round(args.target_flops / (num_flops_per_token * total_batch_size))

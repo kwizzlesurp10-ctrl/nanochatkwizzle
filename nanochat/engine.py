@@ -196,8 +196,18 @@ class Engine:
         assistant_end = get_special("<|assistant_end|>") # if sampled, ends row
         bos = self.tokenizer.get_bos_token_id() # if sampled, ends row
 
-        # 1) Run a batch 1 prefill of the prompt tokens
         m = self.model.config
+        cap = int(getattr(m, "sequence_len", 2048))
+        if len(tokens) > cap:
+            tokens = list(tokens[-cap:])
+        room = max(0, cap - len(tokens))
+        if max_tokens is not None:
+            max_new = min(max(0, max_tokens), room)
+        else:
+            max_new = room
+        decode_len = len(tokens) + max_new
+
+        # 1) Run a batch 1 prefill of the prompt tokens
         kv_model_kwargs = {"num_heads": m.n_kv_head, "head_dim": m.n_embd // m.n_head, "num_layers": m.n_layer}
         kv_cache_prefill = KVCache(
             batch_size=1,
@@ -211,7 +221,7 @@ class Engine:
         logits = logits[:, -1, :].expand(num_samples, -1)  # (num_samples, vocab_size)
 
         # 2) Replicate the KV cache for each sample/row
-        kv_length_hint = (len(tokens) + max_tokens) if max_tokens is not None else self.model.config.sequence_len
+        kv_length_hint = decode_len
         kv_cache_decode = KVCache(
             batch_size=num_samples,
             seq_len=kv_length_hint,
@@ -228,8 +238,7 @@ class Engine:
         # 4) Main generation loop
         num_generated = 0
         while True:
-            # Stop condition: we've reached max tokens
-            if max_tokens is not None and num_generated >= max_tokens:
+            if num_generated >= max_new:
                 break
             # Stop condition: all rows are completed
             if all(state.completed for state in row_states):

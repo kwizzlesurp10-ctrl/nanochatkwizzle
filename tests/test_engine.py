@@ -235,6 +235,18 @@ def test_max_tokens_respected():
         assert num_generated_tokens <= max_tokens, f"Generated {num_generated_tokens} tokens, expected max_tokens={max_tokens} or less."
 
 
+def test_generate_clamps_max_new_to_sequence_budget():
+    """Prompt + max_tokens cannot exceed config.sequence_len (KV cache budget)."""
+    model = MockModel()
+    model.config.sequence_len = 40
+    engine = Engine(model, ByteTokenizer())
+    prompt = [261] + [65] * 29
+    assert len(prompt) == 30
+    results, _ = engine.generate_batch(prompt, max_tokens=100)
+    added = len(results[0]) - len(prompt)
+    assert added <= 10
+
+
 def test_num_samples_count():
     """num_samples=N produces exactly N sequences."""
     model = MockModel()

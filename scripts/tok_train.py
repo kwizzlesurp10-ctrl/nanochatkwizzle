@@ -17,10 +17,12 @@ parser = argparse.ArgumentParser(description='Train a BPE tokenizer')
 parser.add_argument('--max-chars', type=int, default=2_000_000_000, help='Maximum characters to train on (default: 10B)')
 parser.add_argument('--doc-cap', type=int, default=10_000, help='Maximum characters per document (default: 10,000)')
 parser.add_argument('--vocab-size', type=int, default=32768, help='Vocabulary size (default: 32768 = 2^15)')
+parser.add_argument('--use-llama-tokenizer', action='store_true', help='Use a pre-trained Llama tokenizer instead of training')
 args = parser.parse_args()
 print(f"max_chars: {args.max_chars:,}")
 print(f"doc_cap: {args.doc_cap:,}")
 print(f"vocab_size: {args.vocab_size:,}")
+print(f"use_llama_tokenizer: {args.use_llama_tokenizer}")
 
 # -----------------------------------------------------------------------------
 # Text iterator
@@ -41,15 +43,29 @@ def text_iterator():
             yield doc_text
             if nchars > args.max_chars:
                 return
-text_iter = text_iterator()
 
 # -----------------------------------------------------------------------------
-# Train the tokenizer
+# Train or load the tokenizer
 t0 = time.time()
-tokenizer = RustBPETokenizer.train_from_iterator(text_iter, args.vocab_size)
-t1 = time.time()
-train_time = t1 - t0
-print(f"Training time: {train_time:.2f}s")
+if args.use_llama_tokenizer:
+    from nanochat.tokenizer import HuggingFaceTokenizer, SPECIAL_TOKENS
+    from tokenizers import Tokenizer as HFTokenizer
+    print("Loading pre-trained Llama-3-8B tokenizer from NousResearch...")
+    tokenizer_hf = HFTokenizer.from_pretrained("NousResearch/Meta-Llama-3-8B")
+    # Add nanochat special tokens if missing
+    current_special = [w.content for w in tokenizer_hf.get_added_tokens_decoder().values()]
+    to_add = [t for t in SPECIAL_TOKENS if t not in current_special]
+    if to_add:
+        print(f"Adding special tokens: {to_add}")
+        tokenizer_hf.add_special_tokens(to_add)
+    tokenizer = HuggingFaceTokenizer(tokenizer_hf)
+    train_time = 0
+else:
+    text_iter = text_iterator()
+    tokenizer = RustBPETokenizer.train_from_iterator(text_iter, args.vocab_size)
+    t1 = time.time()
+    train_time = t1 - t0
+    print(f"Training time: {train_time:.2f}s")
 
 # -----------------------------------------------------------------------------
 # Save the tokenizer to disk

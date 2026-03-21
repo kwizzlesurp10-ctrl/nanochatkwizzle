@@ -48,7 +48,7 @@ def list_parquet_files(data_dir=None, warn_on_legacy=False):
             print("  Everyone who does `git pull` as of March 4, 2026 is expected to see this message.")
             print("  To upgrade to the new ClimbMix-400B dataset, run these two commands:")
             print()
-            print("    python -m nanochat.dataset -n 170     # download ~170 shards, enough for GPT-2, adjust as desired")
+            print("    python -m nanochat.dataset -n 170     # download ~170 shards for long pretraining runs, adjust as desired")
             print("    python -m scripts.tok_train           # re-train tokenizer on new ClimbMix data")
             print()
             print("  For now, falling back to your old FinewebEdu-100B dataset...")

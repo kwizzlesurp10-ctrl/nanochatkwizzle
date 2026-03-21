@@ -44,7 +44,7 @@ class HuggingFaceTokenizer:
 
     @classmethod
     def from_pretrained(cls, hf_path):
-        # init from a HuggingFace pretrained tokenizer (e.g. "gpt2")
+        # init from a HuggingFace pretrained tokenizer id
         tokenizer = HFTokenizer.from_pretrained(hf_path)
         return cls(tokenizer)
 
@@ -126,7 +126,7 @@ class HuggingFaceTokenizer:
         # Different HuggingFace models use different BOS tokens and there is little consistency
         # 1) attempt to find a <|bos|> token
         bos = self.encode_special("<|bos|>")
-        # 2) if that fails, attempt to find a <|endoftext|> token (e.g. GPT-2 models)
+        # 2) if that fails, attempt to find a <|endoftext|> token
         if bos is None:
             bos = self.encode_special("<|endoftext|>")
         # 3) if these fail, it's better to crash than to silently return None
@@ -387,12 +387,64 @@ class RustBPETokenizer:
 # -----------------------------------------------------------------------------
 # nanochat-specific convenience functions
 
-def get_tokenizer():
+def get_tokenizer(tokenizer_dir: str | None = None, expected_vocab_size: int | None = None):
+    """
+    Load tokenizer from a directory. Defaults to global ~/.cache/nanochat/tokenizer.
+
+    If both tokenizer.json (HF) and tokenizer.pkl (Rust BPE) exist, the default
+    (no expected_vocab_size) prefers HF for backward compatibility. When loading a
+    checkpoint, pass tokenizer_dir pointing to the checkpoint's local copy so the 
+    tokenizer matches the trained embedding table.
+    """
     from nanochat.common import get_base_dir
-    base_dir = get_base_dir()
-    tokenizer_dir = os.path.join(base_dir, "tokenizer")
-    # return HuggingFaceTokenizer.from_directory(tokenizer_dir)
-    return RustBPETokenizer.from_directory(tokenizer_dir)
+    if tokenizer_dir is None or not os.path.exists(tokenizer_dir):
+        base_dir = get_base_dir()
+        tokenizer_dir = os.path.join(base_dir, "tokenizer")
+    
+    hf_path = os.path.join(tokenizer_dir, "tokenizer.json")
+    pickle_path = os.path.join(tokenizer_dir, "tokenizer.pkl")
+
+    def _load_hf():
+        return HuggingFaceTokenizer.from_directory(tokenizer_dir)
+
+    def _load_rust():
+        return RustBPETokenizer.from_directory(tokenizer_dir)
+
+    if expected_vocab_size is None:
+        if os.path.exists(hf_path):
+            return _load_hf()
+        if os.path.exists(pickle_path):
+            return _load_rust()
+        raise FileNotFoundError(
+            f"No tokenizer found in {tokenizer_dir} (need tokenizer.json or tokenizer.pkl). "
+            "Run tok_train or place a trained tokenizer there."
+        )
+
+    candidates = []
+    if os.path.exists(hf_path):
+        try:
+            candidates.append(("huggingface", _load_hf()))
+        except Exception:
+            pass
+    if os.path.exists(pickle_path):
+        try:
+            candidates.append(("rust_bpe", _load_rust()))
+        except Exception:
+            pass
+    if not candidates:
+        raise FileNotFoundError(
+            f"No tokenizer found in {tokenizer_dir} (need tokenizer.json or tokenizer.pkl)."
+        )
+    for name, tok in candidates:
+        if tok.get_vocab_size() == expected_vocab_size:
+            return tok
+    sizes = [(n, t.get_vocab_size()) for n, t in candidates]
+    raise ValueError(
+        f"No tokenizer under {tokenizer_dir} matches model vocab_size={expected_vocab_size}. "
+        f"Found: {sizes}. Copy the tokenizer/ directory from the machine/run that produced the checkpoint, "
+        f"or re-run tokenizer training so ~/.cache/nanochat/tokenizer/tokenizer.pkl (or tokenizer.json) "
+        f"matches the model."
+    )
 
 def get_token_bytes(device="cpu"):
     import torch

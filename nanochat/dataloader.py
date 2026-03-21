@@ -16,23 +16,68 @@ Fallback to the original if you have very limited data AND long documents:
 https://github.com/karpathy/nanochat/blob/3c3a3d7/nanochat/dataloader.py#L78-L117
 """
 
+from pathlib import Path
+import sys
+
+# Allow running this file directly or as a loose `import dataloader` (cwd = nanochat/).
+# __package__ may be None or "" depending on the loader; always ensure repo root is on path.
+_repo_root = Path(__file__).resolve().parents[1]
+_root_s = str(_repo_root)
+if _root_s not in sys.path:
+    sys.path.insert(0, _root_s)
+
+import json
+import os
 import torch
 import pyarrow.parquet as pq
 
 from nanochat.common import get_dist_info
 from nanochat.dataset import list_parquet_files
 
-def _document_batches(split, resume_state_dict, tokenizer_batch_size):
+def _user_document_iterator(user_data_path):
+    """Yields documents from a local JSONL file if it exists."""
+    if user_data_path and os.path.exists(user_data_path):
+        with open(user_data_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                try:
+                    data = json.loads(line)
+                    # Support both raw strings and dicts with 'text' or 'content' keys
+                    if isinstance(data, str):
+                        yield data
+                    elif isinstance(data, dict):
+                        yield data.get('text', data.get('content', ''))
+                except json.JSONDecodeError:
+                    continue
+
+def _document_batches(split, resume_state_dict, tokenizer_batch_size, user_data_path=None):
     """
     Infinite iterator over document batches (list of text strings) from parquet files.
-
-    Handles DDP sharding and approximate resume. Each yield is (text_batch, (pq_idx, rg_idx, epoch))
-    where text_batch is a list of document strings, indices track position for resumption,
-    and epoch counts how many times we've cycled through the dataset (starts at 1).
+    Prioritizes user_data_path if provided and not resuming.
     """
     ddp, ddp_rank, ddp_local_rank, ddp_world_size = get_dist_info()
 
-    warn_on_legacy = ddp_rank == 0 and split == "train" # rank 0 on train split will warn on legacy
+    # 1. First, yield user-specific data (if not resuming or specifically requested)
+    # Note: Currently user data is not indexed for resumption, it just runs once at start of epoch 1.
+    if split == "train" and (resume_state_dict is None or resume_state_dict.get("epoch", 1) == 1):
+        user_docs = []
+        for doc in _user_document_iterator(user_data_path):
+            user_docs.append(doc)
+            if len(user_docs) >= tokenizer_batch_size:
+                # Distribute user data across ranks
+                # Simple way: only master rank yields user data for now? 
+                # No, let's let all ranks see all user data if it's small, or shard it.
+                # Sharding:
+                sharded_batch = user_docs[ddp_rank::ddp_world_size]
+                if sharded_batch:
+                    yield sharded_batch, (0, 0, 1) # dummy indices for user data
+                user_docs = []
+        if user_docs:
+            sharded_batch = user_docs[ddp_rank::ddp_world_size]
+            if sharded_batch:
+                yield sharded_batch, (0, 0, 1)
+
+    # 2. Proceed to general pretraining data
+    warn_on_legacy = ddp_rank == 0 and split == "train" 
     parquet_paths = list_parquet_files(warn_on_legacy=warn_on_legacy)
     assert len(parquet_paths) != 0, "No dataset parquet files found, did you run dataset.py?"
     parquet_paths = parquet_paths[:-1] if split == "train" else parquet_paths[-1:]
@@ -75,7 +120,7 @@ def tokenizing_distributed_data_loader_with_state_bos_bestfit(
     tokenizer, B, T, split,
     tokenizer_threads=4, tokenizer_batch_size=128,
     device="cuda", resume_state_dict=None,
-    buffer_size=1000
+    buffer_size=1000, user_data_path=None
 ):
     """
     BOS-aligned dataloader with Best-Fit Cropping.
@@ -96,7 +141,7 @@ def tokenizing_distributed_data_loader_with_state_bos_bestfit(
     assert split in ["train", "val"], "split must be 'train' or 'val'"
 
     row_capacity = T + 1
-    batches = _document_batches(split, resume_state_dict, tokenizer_batch_size)
+    batches = _document_batches(split, resume_state_dict, tokenizer_batch_size, user_data_path=user_data_path)
     bos_token = tokenizer.get_bos_token_id()
     doc_buffer = []
     pq_idx, rg_idx, epoch = 0, 0, 1

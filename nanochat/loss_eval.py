@@ -28,29 +28,30 @@ def evaluate_bpb(model, batches, steps, token_bytes):
     total_nats = torch.tensor(0.0, dtype=torch.float32, device=model.get_device())
     total_bytes = torch.tensor(0, dtype=torch.int64, device=model.get_device())
     batch_iter = iter(batches)
+    max_batch_size = 4 # chunk the forward pass to avoid OOM
     for _ in range(steps):
         x, y = next(batch_iter)
-        loss2d = model(x, y, loss_reduction='none') # (B, T)
-        loss2d = loss2d.view(-1) # flatten
-        y = y.view(-1) # flatten
-        if (y.int() < 0).any(): # mps does not currently have kernel for < 0 for int64, only int32
-            # slightly more complex code path if some target tokens are ignore_index (e.g. -1)
-            # any target token < 0 is to be ignored: do NOT index token_bytes with negatives
-            valid = y >= 0
-            y_safe = torch.where(valid, y, torch.zeros_like(y))
-            # map valid targets to their byte length; ignored targets contribute 0 bytes
-            num_bytes2d = torch.where(
-                valid,
-                token_bytes[y_safe],
-                torch.zeros_like(y, dtype=token_bytes.dtype)
-            )
-            total_nats += (loss2d * (num_bytes2d > 0)).sum()
-            total_bytes += num_bytes2d.sum()
-        else:
-            # fast path: no ignored targets, safe to index directly
-            num_bytes2d = token_bytes[y]
-            total_nats += (loss2d * (num_bytes2d > 0)).sum()
-            total_bytes += num_bytes2d.sum()
+        batch_size = x.size(0)
+        for i in range(0, batch_size, max_batch_size):
+            x_chunk = x[i:i+max_batch_size]
+            y_chunk = y[i:i+max_batch_size]
+            loss2d = model(x_chunk, y_chunk, loss_reduction='none') # (B_chunk, T)
+            loss2d = loss2d.view(-1) # flatten
+            y_flat = y_chunk.view(-1) # flatten
+            if (y_flat.int() < 0).any():
+                valid = y_flat >= 0
+                y_safe = torch.where(valid, y_flat, torch.zeros_like(y_flat))
+                num_bytes2d = torch.where(
+                    valid,
+                    token_bytes[y_safe],
+                    torch.zeros_like(y_flat, dtype=token_bytes.dtype)
+                )
+                total_nats += (loss2d * (num_bytes2d > 0)).sum()
+                total_bytes += num_bytes2d.sum()
+            else:
+                num_bytes2d = token_bytes[y_flat]
+                total_nats += (loss2d * (num_bytes2d > 0)).sum()
+                total_bytes += num_bytes2d.sum()
     # sum reduce across all ranks
     world_size = dist.get_world_size() if dist.is_initialized() else 1
     if world_size > 1:

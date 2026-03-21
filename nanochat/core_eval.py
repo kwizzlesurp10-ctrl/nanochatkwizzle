@@ -148,20 +148,31 @@ def forward_model(model, input_ids):
     The last column of losses is set to nan because we don't have autoregressive targets there.
     """
     batch_size, seq_len = input_ids.size()
-    outputs = model(input_ids)
-    # Roll the tensor to the left by one position to get the (autoregressive) target ids
-    target_ids = torch.roll(input_ids, shifts=-1, dims=1)
-    # Calculate cross entropy at all positions
-    losses = torch.nn.functional.cross_entropy(
-        outputs.view(batch_size * seq_len, -1),
-        target_ids.view(batch_size * seq_len),
-        reduction='none'
-    ).view(batch_size, seq_len)
-    # Set the last column to be nan because there is no autoregressive loss there
-    losses[:, -1] = float('nan')
-    # Get the argmax predictions at each position
-    predictions = outputs.argmax(dim=-1)
-    return losses, predictions
+    max_batch_size = 8 # chunk the forward pass to avoid OOM
+    all_losses = []
+    all_predictions = []
+    
+    for i in range(0, batch_size, max_batch_size):
+        input_ids_chunk = input_ids[i:i+max_batch_size]
+        curr_batch_size = input_ids_chunk.size(0)
+        outputs = model(input_ids_chunk)
+        # Roll the tensor to the left by one position to get the (autoregressive) target ids
+        target_ids = torch.roll(input_ids_chunk, shifts=-1, dims=1)
+        # Calculate cross entropy at all positions
+        losses = torch.nn.functional.cross_entropy(
+            outputs.view(curr_batch_size * seq_len, -1),
+            target_ids.view(curr_batch_size * seq_len),
+            reduction='none'
+        ).view(curr_batch_size, seq_len)
+        # Set the last column to be nan because there is no autoregressive loss there
+        losses[:, -1] = float('nan')
+        # Get the argmax predictions at each position
+        predictions = outputs.argmax(dim=-1)
+        
+        all_losses.append(losses)
+        all_predictions.append(predictions)
+        
+    return torch.cat(all_losses, dim=0), torch.cat(all_predictions, dim=0)
 
 
 @torch.no_grad()
@@ -193,7 +204,7 @@ def evaluate_example(idx, model, tokenizer, data, device, task_meta):
     else:
         raise ValueError(f"Unsupported task type: {task_type}")
 
-    # Some models can't forward sequences beyond a certain length (e.g. GPT-2)
+    # Some models can't forward sequences beyond a certain length
     # In these cases, we have to truncate sequences to max length and adjust the indices
     if hasattr(model, 'max_seq_len') and model.max_seq_len is not None:
         max_tokens = model.max_seq_len

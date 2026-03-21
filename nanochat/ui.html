@@ -117,6 +117,65 @@
             padding: 0.5rem;
             margin-left: -0.5rem;
             transition: background-color 0.2s ease;
+            position: relative;
+        }
+
+        .save-btn {
+            position: absolute;
+            right: -2rem;
+            top: 0.5rem;
+            opacity: 0;
+            background: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            cursor: pointer;
+            color: #6b7280;
+            transition: opacity 0.2s ease, background-color 0.2s ease;
+        }
+
+        .message.assistant:hover .save-btn {
+            opacity: 1;
+        }
+
+        .save-btn:hover {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+
+        .feedback-container {
+            position: absolute;
+            right: -5rem;
+            top: 0.5rem;
+            display: flex;
+            gap: 0.25rem;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .message.assistant:hover .feedback-container {
+            opacity: 1;
+        }
+
+        .feedback-btn {
+            background: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.2s ease;
+        }
+
+        .feedback-btn:hover {
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+
+        .feedback-btn.active {
+            color: #2563eb;
+            border-color: #2563eb;
+            background-color: #eff6ff;
         }
 
         .message.assistant .message-content:hover {
@@ -287,6 +346,12 @@
         let currentTemperature = 0.8;
         let currentTopK = 50;
 
+        // Session and A/B testing
+        let sessionId = localStorage.getItem('nanochat_session_id') || `sess_${Math.random().toString(36).substring(2, 15)}`;
+        localStorage.setItem('nanochat_session_id', sessionId);
+        let abGroup = localStorage.getItem('nanochat_ab_group') || null; // Will be set by server on first request
+        let currentModel = 'unknown';
+
         chatInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 200) + 'px';
@@ -343,11 +408,50 @@
             if (role === 'assistant' && messageIndex !== null) {
                 contentDiv.setAttribute('data-message-index', messageIndex);
                 contentDiv.setAttribute('title', 'Click to regenerate this response');
-                contentDiv.addEventListener('click', function() {
+                contentDiv.addEventListener('click', function(e) {
+                    if (e.target.className === 'save-btn' || e.target.closest('.save-btn') || 
+                        e.target.className === 'feedback-btn' || e.target.closest('.feedback-btn')) {
+                        return; // don't regenerate if clicking save or feedback
+                    }
                     if (!isGenerating) {
                         regenerateMessage(messageIndex);
                     }
                 });
+
+                // Add Save button
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'save-btn';
+                saveBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>';
+                saveBtn.setAttribute('title', 'Save to training data');
+                saveBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    saveToTraining(content);
+                };
+                contentDiv.appendChild(saveBtn);
+
+                // Add Feedback buttons
+                const feedbackContainer = document.createElement('div');
+                feedbackContainer.className = 'feedback-container';
+
+                const upBtn = document.createElement('button');
+                upBtn.className = 'feedback-btn thumb-up';
+                upBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg>';
+                upBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    submitFeedback(messageIndex, 'thumb_up', upBtn, downBtn);
+                };
+
+                const downBtn = document.createElement('button');
+                downBtn.className = 'feedback-btn thumb-down';
+                downBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path></svg>';
+                downBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    submitFeedback(messageIndex, 'thumb_down', downBtn, upBtn);
+                };
+
+                feedbackContainer.appendChild(upBtn);
+                feedbackContainer.appendChild(downBtn);
+                contentDiv.appendChild(feedbackContainer);
             }
 
             messageDiv.appendChild(contentDiv);
@@ -355,6 +459,62 @@
 
             chatContainer.scrollTop = chatContainer.scrollHeight;
             return contentDiv;
+        }
+
+        async function submitFeedback(messageIndex, feedback, activeBtn, otherBtn) {
+            activeBtn.classList.add('active');
+            otherBtn.classList.remove('active');
+            try {
+                await fetch(`${API_URL}/log_feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message_index: messageIndex,
+                        feedback: feedback,
+                        ab_group: abGroup,
+                        model: currentModel
+                    }),
+                });
+            } catch (e) {
+                console.error('Feedback error:', e);
+            }
+        }
+
+        async function logMetric(name, value) {
+            try {
+                await fetch(`${API_URL}/log_metric`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        metric_name: name,
+                        metric_value: value,
+                        ab_group: abGroup,
+                        model: currentModel
+                    }),
+                });
+            } catch (e) {
+                // Silently fail metrics
+            }
+        }
+
+        async function saveToTraining(text) {
+            try {
+                const response = await fetch(`${API_URL}/save_to_training`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text }),
+                });
+                if (response.ok) {
+                    alert('Saved to user_data.jsonl!');
+                } else {
+                    alert('Failed to save.');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error saving to training data.');
+            }
         }
 
         function editMessage(messageIndex) {
@@ -390,6 +550,9 @@
             const assistantContent = addMessage('assistant', '');
             assistantContent.innerHTML = '<span class="typing-indicator"></span>';
 
+            const startTime = performance.now();
+            let firstTokenTime = null;
+
             try {
                 const response = await fetch(`${API_URL}/chat/completions`, {
                     method: 'POST',
@@ -400,7 +563,9 @@
                         messages: messages,
                         temperature: currentTemperature,
                         top_k: currentTopK,
-                        max_tokens: 512
+                        max_tokens: 512,
+                        session_id: sessionId,
+                        ab_group: abGroup
                     }),
                 });
 
@@ -424,7 +589,21 @@
                         if (line.startsWith('data: ')) {
                             try {
                                 const data = JSON.parse(line.slice(6));
+                                // Handle session metadata in first chunk
+                                if (data.session_id) {
+                                    sessionId = data.session_id;
+                                    abGroup = data.ab_group;
+                                    currentModel = data.model;
+                                    localStorage.setItem('nanochat_session_id', sessionId);
+                                    localStorage.setItem('nanochat_ab_group', abGroup);
+                                    continue;
+                                }
+
                                 if (data.token) {
+                                    if (firstTokenTime === null) {
+                                        firstTokenTime = performance.now();
+                                        logMetric('time_to_first_token', firstTokenTime - startTime);
+                                    }
                                     fullResponse += data.token;
                                     assistantContent.textContent = fullResponse;
                                     chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -434,6 +613,9 @@
                         }
                     }
                 }
+
+                const endTime = performance.now();
+                logMetric('client_perceived_latency', endTime - startTime);
 
                 const assistantMessageIndex = messages.length;
                 messages.push({ role: 'assistant', content: fullResponse });

@@ -22,7 +22,7 @@ import itertools
 import wandb
 import torch
 import torch.distributed as dist
-from nanochat.common import compute_init, compute_cleanup, print0, get_base_dir, DummyWandb, autodetect_device_type
+from nanochat.common import compute_init, compute_cleanup, print0, get_base_dir, DummyWandb, autodetect_device_type, resolve_wandb_init_kwargs
 from nanochat.checkpoint_manager import save_checkpoint, load_model
 from nanochat.engine import Engine
 from tasks.gsm8k import GSM8K
@@ -32,15 +32,17 @@ from tasks.gsm8k import GSM8K
 parser = argparse.ArgumentParser(description="Reinforcement learning on GSM8K")
 # Logging
 parser.add_argument("--run", type=str, default="dummy", help="wandb run name ('dummy' disables wandb logging)")
+parser.add_argument("--wandb-entity", type=str, default=None, help="wandb entity/team (default: WANDB_ENTITY env, else account default)")
+parser.add_argument("--wandb-project", type=str, default=None, help="wandb project (default: WANDB_PROJECT env or nanochat-rl)")
 # Runtime
 parser.add_argument("--device-type", type=str, default="", help="cuda|cpu|mps (empty = autodetect)")
 # Model loading
 parser.add_argument("--model-tag", type=str, default=None, help="model tag to load from")
 parser.add_argument("--model-step", type=int, default=None, help="model step to load from")
 # Training horizon
-parser.add_argument("--num-epochs", type=int, default=1, help="number of epochs over GSM8K")
+parser.add_argument("--num-epochs", "--epochs", type=int, default=1, help="number of epochs over GSM8K")
 # Batch sizes / sampling
-parser.add_argument("--device-batch-size", type=int, default=8, help="max batch size per forward pass")
+parser.add_argument("--device-batch-size", "--batch-size", type=int, default=8, help="max batch size per forward pass")
 parser.add_argument("--examples-per-step", type=int, default=16, help="total examples per optimization step across all ranks")
 parser.add_argument("--num-samples", type=int, default=16, help="number of samples per example/question")
 # Generation
@@ -48,16 +50,27 @@ parser.add_argument("--max-new-tokens", type=int, default=256, help="max tokens 
 parser.add_argument("--temperature", type=float, default=1.0, help="sampling temperature")
 parser.add_argument("--top-k", type=int, default=50, help="top-k sampling (0 = disabled)")
 # Optimization
+parser.add_argument("--learning-rate", type=float, default=None, help="base learning rate (if provided, overrides individual LRs)")
 parser.add_argument("--embedding-lr", type=float, default=0.2, help="learning rate for embedding parameters (Adam)")
 parser.add_argument("--unembedding-lr", type=float, default=0.004, help="learning rate for unembedding parameters (Adam)")
 parser.add_argument("--matrix-lr", type=float, default=0.02, help="learning rate for matrix parameters (Muon)")
 parser.add_argument("--weight-decay", type=float, default=0.0, help="weight decay for embedding/unembedding parameters (Adam)")
+parser.add_argument("--optimizer", type=str, default="muon", choices=["muon", "adamw"], help="optimizer type: 'muon' (default) or 'adamw'")
 parser.add_argument("--init-lr-frac", type=float, default=0.05, help="initial LR as fraction of base LR")
 # Evaluation / checkpointing
 parser.add_argument("--eval-every", type=int, default=60, help="evaluate pass@k every N steps")
 parser.add_argument("--eval-examples", type=int, default=400, help="number of examples for pass@k evaluation")
 parser.add_argument("--save-every", type=int, default=60, help="save checkpoint every N steps")
 args = parser.parse_args()
+
+if args.learning_rate is not None:
+    # If learning_rate is provided, we use it to override individual LRs.
+    # Maintain relative ratios: embedding=10x, unembedding=0.2x relative to matrix=1x
+    args.matrix_lr = args.learning_rate
+    args.embedding_lr = args.learning_rate * (0.2 / 0.02)
+    args.unembedding_lr = args.learning_rate * (0.004 / 0.02)
+    print0(f"Overriding individual LRs with base learning-rate {args.learning_rate}: matrix={args.matrix_lr}, embedding={args.embedding_lr}, unembedding={args.unembedding_lr}")
+
 user_config = vars(args).copy()
 # -----------------------------------------------------------------------------
 
@@ -68,7 +81,8 @@ master_process = ddp_rank == 0 # this process will do logging, checkpointing etc
 
 # wandb logging init
 use_dummy_wandb = args.run == "dummy" or not master_process
-wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(project="nanochat-rl", name=args.run, config=user_config)
+_wandb_kw = resolve_wandb_init_kwargs("nanochat-rl", args.wandb_entity, args.wandb_project)
+wandb_run = DummyWandb() if use_dummy_wandb else wandb.init(name=args.run, config=user_config, **_wandb_kw)
 
 # Init model and tokenizer
 model, tokenizer, meta = load_model("sft", device, phase="eval", model_tag=args.model_tag, step=args.model_step)
@@ -199,6 +213,7 @@ optimizer = model.setup_optimizer(
     embedding_lr=args.embedding_lr,
     matrix_lr=args.matrix_lr,
     weight_decay=args.weight_decay,
+    optimizer_type=args.optimizer,
 )
 
 # Set the initial learning rate as a fraction of the base learning rate

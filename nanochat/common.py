@@ -12,12 +12,29 @@ from filelock import FileLock
 
 # The dtype used for compute (matmuls, activations). Master weights stay fp32 for optimizer precision.
 # Linear layers cast their weights to this dtype in forward, replacing torch.amp.autocast.
-# Override with NANOCHAT_DTYPE env var: "bfloat16", "float16", "float32"
-_DTYPE_MAP = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
+# Override with NANOCHAT_DTYPE (case-insensitive): bfloat16/bf16, float16/fp16, float32/fp32
+_NANOCHAT_DTYPE_ALIASES: dict[str, torch.dtype] = {
+    "bfloat16": torch.bfloat16,
+    "bf16": torch.bfloat16,
+    "float16": torch.float16,
+    "fp16": torch.float16,
+    "float32": torch.float32,
+    "fp32": torch.float32,
+}
+
+
+def _dtype_from_nanochat_env(value: str) -> torch.dtype:
+    key = value.strip().lower()
+    if key not in _NANOCHAT_DTYPE_ALIASES:
+        opts = ", ".join(sorted(_NANOCHAT_DTYPE_ALIASES.keys()))
+        raise ValueError(f"Invalid NANOCHAT_DTYPE={value!r}; expected one of: {opts}")
+    return _NANOCHAT_DTYPE_ALIASES[key]
+
+
 def _detect_compute_dtype():
     env = os.environ.get("NANOCHAT_DTYPE")
-    if env is not None:
-        return _DTYPE_MAP[env], f"set via NANOCHAT_DTYPE={env}"
+    if env is not None and str(env).strip():
+        return _dtype_from_nanochat_env(env), f"set via NANOCHAT_DTYPE={env}"
     if torch.cuda.is_available():
         # bf16 requires SM 80+ (Ampere: A100, A10, etc.)
         # Older GPUs like V100 (SM 70) and T4 (SM 75) only have fp16 tensor cores
@@ -98,6 +115,7 @@ def get_dist_info():
 
 def print0(*args, **kwargs):
     if not dist.is_initialized() or dist.get_rank() == 0:
+        kwargs.setdefault('flush', True)
         print(*args, **kwargs)
 
 
@@ -200,6 +218,48 @@ def recommend_config(vram_gb, training=True, device_type="cuda"):
 def compute_cleanup():
     if dist.is_initialized():
         dist.destroy_process_group()
+
+def resolve_wandb_init_kwargs(default_project: str, entity: str | None = None, project: str | None = None):
+    """
+    Build kwargs for wandb.init(entity=..., project=...) from CLI and env.
+    Env: WANDB_ENTITY, WANDB_PROJECT (CLI wins when non-empty).
+
+    Public API paths look like: f"{entity}/{project}/{run_id}" for wandb.Api().run(...).
+    """
+    resolved_entity = (entity or os.environ.get("WANDB_ENTITY") or "").strip() or None
+    resolved_project = (project or os.environ.get("WANDB_PROJECT") or default_project).strip()
+    return {"entity": resolved_entity, "project": resolved_project}
+
+
+def resolve_wandb_artifact_full_name(
+    artifact: str | None = None,
+    *,
+    entity: str | None = None,
+    project: str | None = None,
+    name_with_alias: str | None = None,
+) -> str:
+    """
+    Build the string passed to wandb.Api().artifact(...): entity/project/name:alias.
+
+    Either pass artifact as the full path, or pass entity, project, and name_with_alias
+    (name_with_alias may be 'my-artifact:v0' or include the version alias).
+    """
+    if artifact is not None and str(artifact).strip():
+        full = str(artifact).strip()
+        if full.count("/") < 2:
+            raise ValueError(
+                f"artifact must look like entity/project/name[:alias], got {full!r}"
+            )
+        return full
+    e = (entity or "").strip()
+    p = (project or "").strip()
+    n = (name_with_alias or "").strip()
+    if e and p and n:
+        return f"{e}/{p}/{n}"
+    raise ValueError(
+        "Provide artifact='entity/project/name:alias' or non-empty entity, project, and name_with_alias"
+    )
+
 
 class DummyWandb:
     def log(self, d): pass

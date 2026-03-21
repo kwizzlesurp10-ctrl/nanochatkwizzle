@@ -10,8 +10,8 @@ Default is all three: --eval core,bpb,sample
 
 Examples:
 
-    # Evaluate a HuggingFace model (e.g. GPT-2 124M) using 8 GPUs
-    torchrun --nproc_per_node=8 -m scripts.base_eval --hf-path openai-community/gpt2
+    # Evaluate a HuggingFace causal LM using 8 GPUs
+    torchrun --nproc_per_node=8 -m scripts.base_eval --hf-path meta-llama/Llama-3.2-1B
 
     # Evaluate a nanochat model (e.g. d24) using 8 GPUs
     torchrun --nproc_per_node=8 -m scripts.base_eval --model-tag d24 --device-batch-size=16
@@ -71,7 +71,8 @@ def load_hf_model(hf_path: str, device):
     model = AutoModelForCausalLM.from_pretrained(hf_path)
     model.to(device)
     model.eval()
-    max_seq_len = 1024 if "gpt2" in hf_path else None
+    cfg = model.config
+    max_seq_len = getattr(cfg, "max_position_embeddings", None) or getattr(cfg, "n_positions", None)
     model = ModelWrapper(model, max_seq_len=max_seq_len)
     tokenizer = HuggingFaceTokenizer.from_pretrained(hf_path)
     return model, tokenizer
@@ -153,7 +154,17 @@ def evaluate_core(model, tokenizer, device, max_per_task=-1):
         # Shuffle for consistent subsampling when using max_per_task
         shuffle_rng = random.Random(1337)
         shuffle_rng.shuffle(data)
+        # Need at least num_fewshot + 1 examples (few-shot context + 1 query).
+        min_required = task_meta["num_fewshot"] + 1
+        if len(data) < min_required:
+            elapsed = time.time() - start_time
+            print0(f"skipping (dataset too small: {len(data)} < {min_required}) | time: {elapsed:.2f}s")
+            continue
         if max_per_task > 0:
+            if max_per_task < min_required:
+                elapsed = time.time() - start_time
+                print0(f"skipping (max_per_task={max_per_task} < min_required={min_required}) | time: {elapsed:.2f}s")
+                continue
             data = data[:max_per_task]
 
         accuracy = evaluate_task(model, tokenizer, data, device, task_meta)
@@ -164,7 +175,7 @@ def evaluate_core(model, tokenizer, device, max_per_task=-1):
         elapsed = time.time() - start_time
         print0(f"accuracy: {accuracy:.4f} | centered: {centered_result:.4f} | time: {elapsed:.2f}s")
 
-    core_metric = sum(centered_results.values()) / len(centered_results)
+    core_metric = sum(centered_results.values()) / len(centered_results) if centered_results else 0.0
     out = {
         "results": results,
         "centered_results": centered_results,
@@ -178,7 +189,7 @@ def evaluate_core(model, tokenizer, device, max_per_task=-1):
 def main():
     parser = argparse.ArgumentParser(description="Base model evaluation")
     parser.add_argument('--eval', type=str, default='core,bpb,sample', help='Comma-separated evaluations to run: core,bpb,sample (default: all)')
-    parser.add_argument('--hf-path', type=str, default=None, help='HuggingFace model path (e.g. openai-community/gpt2-xl)')
+    parser.add_argument('--hf-path', type=str, default=None, help='HuggingFace model id for causal LM eval')
     parser.add_argument('--model-tag', type=str, default=None, help='nanochat model tag to identify the checkpoint directory')
     parser.add_argument('--step', type=int, default=None, help='Model step to load (default = last)')
     parser.add_argument('--max-per-task', type=int, default=-1, help='Max examples per CORE task (-1 = all)')
