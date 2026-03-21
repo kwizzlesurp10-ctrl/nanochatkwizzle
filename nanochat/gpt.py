@@ -53,8 +53,8 @@ class Linear(nn.Linear):
     but matmuls run in the activation dtype (typically bf16 from embeddings).
     Optionally supports LoRA (Low-Rank Adaptation)."""
     
-    def __init__(self, in_features, out_features, bias=False, lora_rank=0, lora_alpha=1):
-        super().__init__(in_features, out_features, bias=bias)
+    def __init__(self, in_features, out_features, bias=False, lora_rank=0, lora_alpha=1, device=None, dtype=None):
+        super().__init__(in_features, out_features, bias=bias, device=device, dtype=dtype)
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         if lora_rank > 0:
