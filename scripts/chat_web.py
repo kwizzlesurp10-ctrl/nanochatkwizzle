@@ -28,6 +28,12 @@ Endpoints:
   GET  /health     - Health check with worker pool status
   GET  /stats      - Worker pool statistics and GPU utilization
 
+Persistence (optional):
+  Set DATABASE_URL or pass --database-url with an async SQLAlchemy URL, e.g.
+  sqlite+aiosqlite:///./data/nanochat.db or postgresql+asyncpg://user:pass@host/db
+  Tables: sessions, analytics_events, user_training_text. Without DATABASE_URL,
+  analytics and save_to_training use JSONL as before.
+
 Abuse Prevention:
   - Maximum 500 messages per request
   - Maximum 8000 characters per message
@@ -38,14 +44,18 @@ Abuse Prevention:
 """
 
 import argparse
+import datetime
 import json
 import os
+import re
 import asyncio
 import logging
 import random
 import urllib.error
 import urllib.request
+import time
 
+import numpy as np
 import httpx
 import torch
 from contextlib import asynccontextmanager
@@ -60,6 +70,14 @@ from nanochat.common import compute_init, autodetect_device_type
 from nanochat.netutil import assert_tcp_port_available
 from nanochat.checkpoint_manager import load_model
 from nanochat.engine import Engine
+from nanochat.db.models import Base
+from nanochat.db.repository import (
+    ensure_chat_session,
+    insert_feedback_event,
+    insert_metric_event,
+    insert_training_text,
+)
+from nanochat.db.session import create_async_engine_from_url, make_session_factory
 
 # Abuse prevention limits
 MAX_MESSAGES_PER_REQUEST = 500
@@ -93,9 +111,20 @@ parser.add_argument('--rag-chroma-tenant', type=str, default=None, help='Chroma 
 parser.add_argument('--rag-chroma-database', type=str, default=None, help='Chroma Cloud database (or set CHROMA_DATABASE)')
 parser.add_argument('--rag-chroma-collection', type=str, default=None, help='Chroma Cloud collection name (default: first collection)')
 parser.add_argument('--ollama-url', type=str, default='http://127.0.0.1:11434', help='Ollama API base URL')
+parser.add_argument('--ollama-keep-alive', type=str, default='5m', help='Ollama keep_alive parameter (e.g. 5m, 1h, 0)')
+parser.add_argument('--ollama-num-ctx', type=int, default=4096, help='Ollama num_ctx parameter')
 parser.add_argument('--rag-embed-model', type=str, default='nomic-embed-text', help='Ollama embedding model name')
 parser.add_argument('--rag-chunk-size', type=int, default=800, help='Max characters per chunk (corpus mode)')
+parser.add_argument('--rag-k', type=int, default=3, help='Number of documents to retrieve for RAG')
+parser.add_argument(
+    '--database-url',
+    type=str,
+    default=None,
+    help='SQLAlchemy async URL (sets DATABASE_URL) for analytics + training tables; e.g. sqlite+aiosqlite:///./data/nanochat.db',
+)
 args = parser.parse_args()
+if args.database_url:
+    os.environ["DATABASE_URL"] = args.database_url
 
 # Configure logging for conversation traffic
 logging.basicConfig(
@@ -109,15 +138,16 @@ device_type = autodetect_device_type() if args.device_type == "" else args.devic
 ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init(device_type)
 
 
-def _ollama_embedding(prompt: str, model: str, base_url: str, timeout: float = 120.0) -> list:
+async def _ollama_embedding(prompt: str, model: str, base_url: str, timeout: float = 120.0) -> list:
     url = base_url.rstrip("/") + "/api/embeddings"
-    body = json.dumps({"model": model, "prompt": prompt}).encode()
-    req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            out = json.loads(resp.read().decode())
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Ollama unreachable at {base_url} ({e}). Run ollama serve and ollama pull {model}") from e
+    body = {"model": model, "prompt": prompt}
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            resp = await client.post(url, json=body)
+            resp.raise_for_status()
+            out = resp.json()
+        except httpx.HTTPError as e:
+            raise RuntimeError(f"Ollama unreachable at {base_url} ({e}). Run ollama serve and ollama pull {model}") from e
     return out["embedding"]
 
 
@@ -138,7 +168,11 @@ async def ollama_chat_stream(
 ) -> AsyncGenerator[str, None]:
     """Stream chat tokens from Ollama /api/chat (NDJSON)."""
     url = args.ollama_url.rstrip("/") + "/api/chat"
-    opts = {"temperature": temperature, "num_predict": max_new_tokens}
+    opts = {
+        "temperature": temperature,
+        "num_predict": max_new_tokens,
+        "num_ctx": args.ollama_num_ctx,
+    }
     if top_k > 0:
         opts["top_k"] = top_k
     body = {
@@ -146,6 +180,7 @@ async def ollama_chat_stream(
         "messages": messages,
         "stream": True,
         "options": opts,
+        "keep_alive": args.ollama_keep_alive,
     }
     async with httpx.AsyncClient(timeout=httpx.Timeout(600.0, connect=30.0)) as client:
         async with client.stream("POST", url, json=body) as resp:
@@ -166,31 +201,43 @@ async def ollama_chat_stream(
     yield f"data: {json.dumps({'done': True})}\n\n"
 
 
-def _cosine_vec(a: list, b: list) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    na = sum(x * x for x in a) ** 0.5
-    nb = sum(x * x for x in b) ** 0.5
-    if na * nb < 1e-12:
-        return 0.0
-    return dot / (na * nb)
-
-
 def _chunk_corpus(text: str, max_chars: int, overlap: int) -> list:
     text = text.strip()
     if not text:
         return []
+    # Improved chunking: try to split by paragraphs, then sentences if still too large
     paras = [p.strip() for p in text.split("\n\n") if p.strip()]
     if not paras:
         paras = [text]
+    
     chunks = []
     for p in paras:
         if len(p) <= max_chars:
             chunks.append(p)
         else:
+            # Simple recursive-ish split: if paragraph is too long, split by sentences
+            sentences = re.split(r'(?<=[.!?])\s+', p)
+            current_chunk = ""
+            for s in sentences:
+                if len(current_chunk) + len(s) + 1 <= max_chars:
+                    current_chunk = (current_chunk + " " + s).strip()
+                else:
+                    if current_chunk:
+                        chunks.append(current_chunk)
+                    current_chunk = s
+            if current_chunk:
+                chunks.append(current_chunk)
+    
+    # Final pass to ensure no chunk is over max_chars (fallback to hard split)
+    final_chunks = []
+    for c in chunks:
+        if len(c) <= max_chars:
+            final_chunks.append(c)
+        else:
             step = max(1, max_chars - overlap)
-            for i in range(0, len(p), step):
-                chunks.append(p[i : i + max_chars])
-    return chunks
+            for i in range(0, len(c), step):
+                final_chunks.append(c[i : i + max_chars])
+    return final_chunks
 
 
 class ChromaOllamaRAG:
@@ -199,8 +246,8 @@ class ChromaOllamaRAG:
         self._model = model
         self._base = base_url
 
-    def similarity_search(self, query: str, k: int = 3):
-        emb = _ollama_embedding(query, self._model, self._base)
+    async def similarity_search(self, query: str, k: int = 3):
+        emb = await _ollama_embedding(query, self._model, self._base)
         try:
             n = self._col.count()
         except Exception:
@@ -217,28 +264,41 @@ class ChromaOllamaRAG:
 
 
 class OllamaCorpusRAG:
-    def __init__(self, chunks: list, model: str, base_url: str):
+    def __init__(self, chunks: list, embs: np.ndarray, model: str, base_url: str):
         self._chunks = chunks
+        self._embs = embs # np.ndarray of shape (num_chunks, dim)
         self._model = model
         self._base = base_url
-        self._embs = []
-        print(f"RAG: embedding {len(chunks)} corpus chunks via Ollama ({model})...")
-        for i, ch in enumerate(chunks):
-            self._embs.append(_ollama_embedding(ch, model, base_url))
-            if (i + 1) % 5 == 0 or i + 1 == len(chunks):
-                print(f"  {i + 1}/{len(chunks)}")
-        print("RAG: corpus index ready.")
 
-    def similarity_search(self, query: str, k: int = 3):
-        qe = _ollama_embedding(query, self._model, self._base)
-        ranked = sorted(
-            zip(self._embs, self._chunks),
-            key=lambda t: -_cosine_vec(qe, t[0]),
-        )
+    @classmethod
+    async def create(cls, chunks: list, model: str, base_url: str, batch_size: int = 10):
+        print(f"RAG: embedding {len(chunks)} corpus chunks via Ollama ({model}) in parallel...")
+        embs = []
+        # Parallelize embedding calls in batches to avoid overwhelming Ollama
+        for i in range(0, len(chunks), batch_size):
+            batch = chunks[i : i + batch_size]
+            tasks = [_ollama_embedding(ch, model, base_url) for ch in batch]
+            batch_embs = await asyncio.gather(*tasks)
+            embs.extend(batch_embs)
+            print(f"  {min(i + batch_size, len(chunks))}/{len(chunks)}")
+        
+        print("RAG: corpus index ready.")
+        return cls(chunks, np.array(embs), model, base_url)
+
+    async def similarity_search(self, query: str, k: int = 3):
+        qe = np.array(await _ollama_embedding(query, self._model, self._base))
+        # Vectorized cosine similarity: (A . B) / (||A|| * ||B||)
+        # Assuming embeddings might not be normalized
+        dot = np.dot(self._embs, qe)
+        norm_embs = np.linalg.norm(self._embs, axis=1)
+        norm_qe = np.linalg.norm(qe)
+        similarities = dot / (norm_embs * norm_qe + 1e-12)
+        
+        top_k_indices = np.argsort(-similarities)[:k]
         out = []
-        for _, ch in ranked[:k]:
+        for idx in top_k_indices:
             o = type("Doc", (), {})()
-            o.page_content = ch
+            o.page_content = self._chunks[idx]
             out.append(o)
         return out
 
@@ -482,7 +542,7 @@ async def lifespan(app: FastAPI):
                     raw = f.read()
                 chunks = _chunk_corpus(raw, args.rag_chunk_size, max(100, args.rag_chunk_size // 4))
                 if chunks:
-                    app.state.rag_db = OllamaCorpusRAG(chunks, args.rag_embed_model, args.ollama_url)
+                    app.state.rag_db = await OllamaCorpusRAG.create(chunks, args.rag_embed_model, args.ollama_url)
             if app.state.rag_db is None:
                 print(
                     "RAG: disabled. Start Ollama, run `ollama pull nomic-embed-text`, "
@@ -491,10 +551,27 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"RAG Warning: {e}")
 
+    app.state.db_engine = None
+    app.state.db_session_factory = None
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url:
+        db_engine = create_async_engine_from_url(db_url)
+        async with db_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        app.state.db_engine = db_engine
+        app.state.db_session_factory = make_session_factory(db_engine)
+        print("Database: persistence enabled (sessions, analytics_events, user_training_text).")
+
     print(
         "Inference/RAG startup finished; Uvicorn will print the listen URL when the socket is bound."
     )
     yield
+
+    eng = getattr(app.state, "db_engine", None)
+    if eng is not None:
+        await eng.dispose()
+        app.state.db_engine = None
+        app.state.db_session_factory = None
 
 app = FastAPI(lifespan=lifespan)
 
@@ -506,65 +583,128 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def _dual_write_user_jsonl() -> bool:
+    v = os.environ.get("NANOCHAT_DUAL_WRITE_USER_DATA", "1").lower()
+    return v not in ("0", "false", "no")
+
+
 @app.post("/save_to_training")
 async def save_to_training(request: SaveToTrainingRequest):
-    """Save user-provided text to the local training dataset."""
+    """Save user-provided text to the DB (if DATABASE_URL) and/or user_data.jsonl."""
     user_data_path = "user_data.jsonl"
-    try:
-        with open(user_data_path, "a", encoding="utf-8") as f:
-            json_line = json.dumps({"text": request.text}, ensure_ascii=False)
-            f.write(json_line + "\n")
-        logger.info(f"Saved to {user_data_path}: {request.text[:50]}...")
-        return {"status": "ok", "message": "Saved to training data"}
-    except Exception as e:
-        logger.error(f"Failed to save to {user_data_path}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    factory = getattr(app.state, "db_session_factory", None)
+    if factory:
+        try:
+            async with factory() as db:
+                await insert_training_text(db, request.text, source="save_to_training")
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to save training text to database: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    if not factory or _dual_write_user_jsonl():
+        try:
+            with open(user_data_path, "a", encoding="utf-8") as f:
+                json_line = json.dumps({"text": request.text}, ensure_ascii=False)
+                f.write(json_line + "\n")
+            logger.info(f"Saved to {user_data_path}: {request.text[:50]}...")
+        except Exception as e:
+            logger.error(f"Failed to save to {user_data_path}: {e}")
+            if not factory:
+                raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "ok", "message": "Saved to training data"}
 
 @app.post("/log_feedback")
 async def log_feedback(request: FeedbackRequest):
     """Log user feedback (thumb up/down)."""
-    analytics_path = "analytics.jsonl"
-    try:
-        with open(analytics_path, "a", encoding="utf-8") as f:
-            import datetime
-            log_entry = {
-                "event": "feedback",
-                "session_id": request.session_id,
-                "message_index": request.message_index,
-                "feedback": request.feedback,
-                "ab_group": request.ab_group,
-                "model": request.model,
-                "timestamp": datetime.datetime.now().isoformat(),
-            }
-            f.write(json.dumps(log_entry) + "\n")
-        logger.info(f"Logged feedback: {request.feedback} for session {request.session_id}")
-        return {"status": "ok"}
-    except Exception as e:
-        logger.error(f"Failed to log feedback: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    factory = getattr(app.state, "db_session_factory", None)
+    backend = getattr(app.state, "backend", "ollama")
+    if factory:
+        try:
+            async with factory() as db:
+                await ensure_chat_session(
+                    db,
+                    session_id=request.session_id,
+                    ab_group=request.ab_group,
+                    model=request.model,
+                    backend=backend,
+                )
+                await insert_feedback_event(
+                    db,
+                    session_id=request.session_id,
+                    message_index=request.message_index,
+                    feedback=request.feedback,
+                    ab_group=request.ab_group,
+                    model=request.model,
+                )
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log feedback: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        analytics_path = "analytics.jsonl"
+        try:
+            with open(analytics_path, "a", encoding="utf-8") as f:
+                log_entry = {
+                    "event": "feedback",
+                    "session_id": request.session_id,
+                    "message_index": request.message_index,
+                    "feedback": request.feedback,
+                    "ab_group": request.ab_group,
+                    "model": request.model,
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                }
+                f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to log feedback: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    logger.info(f"Logged feedback: {request.feedback} for session {request.session_id}")
+    return {"status": "ok"}
 
 @app.post("/log_metric")
 async def log_metric(request: MetricRequest):
     """Log performance metrics."""
-    analytics_path = "analytics.jsonl"
-    try:
-        with open(analytics_path, "a", encoding="utf-8") as f:
-            import datetime
-            log_entry = {
-                "event": "metric",
-                "session_id": request.session_id,
-                "metric_name": request.metric_name,
-                "metric_value": request.metric_value,
-                "ab_group": request.ab_group,
-                "model": request.model,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-            f.write(json.dumps(log_entry) + "\n")
-        # logger.info(f"Logged metric: {request.metric_name}={request.metric_value} for session {request.session_id}")
-        return {"status": "ok"}
-    except Exception as e:
-        logger.error(f"Failed to log metric: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    factory = getattr(app.state, "db_session_factory", None)
+    backend = getattr(app.state, "backend", "ollama")
+    if factory:
+        try:
+            async with factory() as db:
+                await ensure_chat_session(
+                    db,
+                    session_id=request.session_id,
+                    ab_group=request.ab_group,
+                    model=request.model,
+                    backend=backend,
+                )
+                await insert_metric_event(
+                    db,
+                    session_id=request.session_id,
+                    metric_name=request.metric_name,
+                    metric_value=request.metric_value,
+                    ab_group=request.ab_group,
+                    model=request.model,
+                )
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log metric: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        analytics_path = "analytics.jsonl"
+        try:
+            with open(analytics_path, "a", encoding="utf-8") as f:
+                log_entry = {
+                    "event": "metric",
+                    "session_id": request.session_id,
+                    "metric_name": request.metric_name,
+                    "metric_value": request.metric_value,
+                    "ab_group": request.ab_group,
+                    "model": request.model,
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                }
+                f.write(json.dumps(log_entry) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to log metric: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    return {"status": "ok"}
 
 @app.get("/")
 async def root():
@@ -643,6 +783,62 @@ async def generate_stream(
 
     yield f"data: {json.dumps({'done': True})}\n\n"
 
+
+def _append_analytics_jsonl(log_entry: dict) -> None:
+    analytics_path = "analytics.jsonl"
+    try:
+        with open(analytics_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_entry) + "\n")
+    except OSError as e:
+        logger.error(f"Failed to append analytics: {e}")
+
+
+async def _persist_generation_metrics(
+    session_id: str,
+    ab_group: str,
+    model: str,
+    backend: str,
+    metrics: list[tuple[str, float]],
+) -> None:
+    factory = getattr(app.state, "db_session_factory", None)
+    if factory:
+        try:
+            async with factory() as db:
+                await ensure_chat_session(
+                    db,
+                    session_id=session_id,
+                    ab_group=ab_group,
+                    model=model,
+                    backend=backend,
+                )
+                for name, val in metrics:
+                    await insert_metric_event(
+                        db,
+                        session_id=session_id,
+                        metric_name=name,
+                        metric_value=float(val),
+                        ab_group=ab_group,
+                        model=model,
+                    )
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to persist metrics to database: {e}")
+    else:
+        ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        for name, val in metrics:
+            _append_analytics_jsonl(
+                {
+                    "event": "metric",
+                    "session_id": session_id,
+                    "metric_name": name,
+                    "metric_value": val,
+                    "ab_group": ab_group,
+                    "model": model,
+                    "timestamp": ts,
+                }
+            )
+
+
 @app.post("/chat/completions")
 async def chat_completions(request: ChatRequest):
     """Chat completion endpoint (streaming only) — Ollama or local nanochat."""
@@ -652,6 +848,23 @@ async def chat_completions(request: ChatRequest):
     # A/B testing logic: assign a group if not provided
     ab_group = request.ab_group or random.choice(["A", "B"])
     session_id = request.session_id or f"sess_{random.randint(0, 1000000)}"
+
+    factory = getattr(app.state, "db_session_factory", None)
+    backend_name = "ollama" if app.state.backend == "ollama" else "nanochat"
+    model_for_session = args.ollama_chat_model if backend_name == "ollama" else (args.model_tag or "nanochat")
+    if factory:
+        try:
+            async with factory() as db:
+                await ensure_chat_session(
+                    db,
+                    session_id=session_id,
+                    ab_group=ab_group,
+                    model=model_for_session,
+                    backend=backend_name,
+                )
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to upsert chat session: {e}")
 
     logger.info(f"Session: {session_id}, AB Group: {ab_group}")
     logger.info("=" * 20)
@@ -677,14 +890,13 @@ async def chat_completions(request: ChatRequest):
         last_user_message = next((m.content for m in reversed(modified_messages) if m.role == "user"), "")
         if last_user_message:
             print(f"RAG: Retrieving context for query: '{last_user_message[:50]}...'")
-            results = app.state.rag_db.similarity_search(last_user_message, k=3)
+            results = await app.state.rag_db.similarity_search(last_user_message, k=args.rag_k)
             if results:
                 rag_context = "Relevant context:\n"
                 for doc in results:
                     rag_context += f"- {doc.page_content}\n"
                 print(f"RAG: Found {len(results)} context snippets.")
 
-    import time
     start_time = time.time()
 
     if app.state.backend == "ollama":
@@ -726,11 +938,18 @@ async def chat_completions(request: ChatRequest):
                 logger.info(f"[ASSISTANT] (Ollama {args.ollama_chat_model}): {full_response}")
                 logger.info(f"Stats: {token_count} tokens, {duration:.2f}s, {tps:.2f} tok/s")
                 logger.info("=" * 20)
-                
-                # Log to analytics
-                log_metric_internal(session_id, "tokens_per_second", tps, ab_group, args.ollama_chat_model)
-                log_metric_internal(session_id, "total_tokens", token_count, ab_group, args.ollama_chat_model)
-                log_metric_internal(session_id, "generation_time", duration, ab_group, args.ollama_chat_model)
+
+                await _persist_generation_metrics(
+                    session_id,
+                    ab_group,
+                    args.ollama_chat_model,
+                    "ollama",
+                    [
+                        ("tokens_per_second", tps),
+                        ("total_tokens", float(token_count)),
+                        ("generation_time", duration),
+                    ],
+                )
 
         return StreamingResponse(stream_ollama(), media_type="text/event-stream")
 
@@ -813,13 +1032,20 @@ async def chat_completions(request: ChatRequest):
                 full_response = "".join(response_tokens)
                 logger.info(f"[ASSISTANT] (GPU {worker.gpu_id}): {full_response}")
                 logger.info(f"Stats: {token_count} tokens, {duration:.2f}s, {tps:.2f} tok/s")
-                logger.info("="*20)
-                
-                # Log to analytics
-                log_metric_internal(session_id, "tokens_per_second", tps, ab_group, model_name)
-                log_metric_internal(session_id, "total_tokens", token_count, ab_group, model_name)
-                log_metric_internal(session_id, "generation_time", duration, ab_group, model_name)
-                
+                logger.info("=" * 20)
+
+                await _persist_generation_metrics(
+                    session_id,
+                    ab_group,
+                    model_name,
+                    "nanochat",
+                    [
+                        ("tokens_per_second", tps),
+                        ("total_tokens", float(token_count)),
+                        ("generation_time", duration),
+                    ],
+                )
+
                 # Release worker back to pool after streaming is done
                 await worker_pool.release_worker(worker)
 
@@ -832,28 +1058,10 @@ async def chat_completions(request: ChatRequest):
         await worker_pool.release_worker(worker)
         raise e
 
-def log_metric_internal(session_id, metric_name, metric_value, ab_group, model):
-    """Internal helper to log metrics to file."""
-    analytics_path = "analytics.jsonl"
-    try:
-        with open(analytics_path, "a", encoding="utf-8") as f:
-            import datetime
-            log_entry = {
-                "event": "metric",
-                "session_id": session_id,
-                "metric_name": metric_name,
-                "metric_value": metric_value,
-                "ab_group": ab_group,
-                "model": model,
-                "timestamp": datetime.datetime.now().isoformat()
-            }
-            f.write(json.dumps(log_entry) + "\n")
-    except Exception as e:
-        logger.error(f"Failed to log internal metric: {e}")
-
 @app.get("/health")
 async def health():
     """Health check endpoint."""
+    db_on = getattr(app.state, "db_session_factory", None) is not None
     if getattr(app.state, "backend", "nanochat") == "ollama":
         reach = _ollama_tags_reachable(args.ollama_url)
         return {
@@ -863,6 +1071,7 @@ async def health():
             "ollama_chat_model": args.ollama_chat_model,
             "ready": reach,
             "ollama_reachable": reach,
+            "database": db_on,
         }
     worker_pool = getattr(app.state, "worker_pool", None)
     return {
@@ -871,6 +1080,7 @@ async def health():
         "ready": worker_pool is not None and len(worker_pool.workers) > 0,
         "num_gpus": worker_pool.num_gpus if worker_pool else 0,
         "available_workers": worker_pool.available_workers.qsize() if worker_pool else 0,
+        "database": db_on,
     }
 
 @app.get("/stats")

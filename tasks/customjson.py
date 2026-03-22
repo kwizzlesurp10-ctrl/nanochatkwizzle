@@ -48,17 +48,21 @@ class CustomJSON(Task):
                                 {"role": "user", "content": user_content},
                                 {"role": "assistant", "content": str(raw.get("output", ""))},
                             ]
+                        elif "messages" in raw:
+                            messages = raw["messages"]
                         else:
                             raise ValueError(f"Unsupported dict keys: {list(raw.keys())}")
                     else:
                         messages = raw
+
                     assert isinstance(messages, list), f"Expected list of messages, got {type(messages)}"
                     assert len(messages) >= 2, f"Conversation must have at least 2 messages, got {len(messages)}"
                     for i, message in enumerate(messages):
                         assert "role" in message, f"Message {i} missing 'role' field"
                         assert "content" in message, f"Message {i} missing 'content' field"
-                        expected_role = "user" if i % 2 == 0 else "assistant"
-                        assert message["role"] == expected_role, f"Message {i} has role {message['role']} but should be {expected_role}"
+                        # We are now more flexible with roles to support browser trajectories
+                        allowed_roles = {"user", "assistant", "system", "thought", "action", "observation"}
+                        assert message["role"] in allowed_roles, f"Message {i} has unknown role {message['role']}"
                         assert isinstance(message["content"], str), f"Message {i} content must be a string"
 
                     self.conversations.append(messages)

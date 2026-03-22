@@ -13,10 +13,15 @@ import gc
 import argparse
 import os
 import time
+import logging
 os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 import wandb
 import torch
-from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized, resolve_wandb_init_kwargs
+from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized, resolve_wandb_init_kwargs, setup_default_logging
+
+# setup logging
+setup_default_logging()
+logger = logging.getLogger(__name__)
 from nanochat.tokenizer import get_token_bytes
 from nanochat.checkpoint_manager import save_checkpoint, load_model, load_optimizer_state
 from nanochat.loss_eval import evaluate_bpb
@@ -130,7 +135,8 @@ if args.learning_rate is not None:
     print0(f"Overriding individual LRs with base learning-rate {args.learning_rate}: matrix={args.matrix_lr}, embedding={args.embedding_lr}, unembedding={args.unembedding_lr}")
 
 orig_model = model
-model = torch.compile(model, dynamic=False)
+if device_type == "cuda":
+    model = torch.compile(model, dynamic=False)
 depth = model.config.n_layer
 num_flops_per_token = model.estimate_flops()
 tokens_per_fwdbwd = args.device_batch_size * args.max_seq_len # tokens per iteration for a single rank
@@ -176,6 +182,7 @@ for group in optimizer.param_groups:
 # SFT data mixture and DataLoader
 identity_conversations_filepath = os.path.join(base_dir, "identity_conversations.jsonl")
 basecamp_tactics_filepath = os.path.join(base_dir, "basecamp_tactics.jsonl")
+browser_data_filepath = os.path.join(os.path.dirname(__file__), "..", "dev", "browser_data_dummy.jsonl")
 train_tasks = [
     SmolTalk(split="train"), # 460K rows of general conversations
     CustomJSON(filepath=identity_conversations_filepath), # 1000 rows of synthetic identity conversations
@@ -183,6 +190,10 @@ train_tasks = [
     CustomJSON(filepath=basecamp_tactics_filepath), # Basecamp project management tactics
     CustomJSON(filepath=basecamp_tactics_filepath), # Multi-epoch for Basecamp data
     CustomJSON(filepath=basecamp_tactics_filepath),
+    CustomJSON(filepath=browser_data_filepath), # Browser automation trajectories
+    CustomJSON(filepath=browser_data_filepath), # Multi-epoch for browser data
+    CustomJSON(filepath=browser_data_filepath),
+    CustomJSON(filepath=browser_data_filepath),
     *[MMLU(subset="auxiliary_train", split="train") for _ in range(args.mmlu_epochs)], # 100K rows per epoch
 
     *[GSM8K(subset="main", split="train") for _ in range(args.gsm8k_epochs)], # 8K rows per epoch
@@ -239,6 +250,11 @@ def sft_data_generator_bos_bestfit(split, buffer_size=100):
                 # Note: last_step is now triggered based on consumption, not fetching
 
     while True:
+        # it is the iteration counter starting at 0
+        if 0 < args.num_iterations <= it:
+            last_step = True
+        it += 1
+
         rows = []
         mask_rows = []
         row_lengths = []  # Track actual content length (excluding padding) for each row
@@ -285,16 +301,11 @@ def sft_data_generator_bos_bestfit(split, buffer_size=100):
             rows.append(row[:row_capacity])
             mask_rows.append(mask_row[:row_capacity])
 
-        # Stopping condition to respect num_iterations, if given
-        it += 1
-        if 0 < args.num_iterations <= it and split == "train":
-            last_step = True
-
         # Update progress tracking (based on consumed, not cursor, to account for buffering)
         if split == "train":
             current_epoch = epoch
             if args.num_iterations > 0:
-                approx_progress = it / args.num_iterations
+                approx_progress = (it - 1) / args.num_iterations
             else:
                 approx_progress = consumed / dataset_size
             # Trigger last_step when we've consumed enough (instead of when cursor wraps)
@@ -354,6 +365,7 @@ total_training_time = 0 # total wall-clock time of training
 step = 0
 loop_start_wall = time.time()
 while True:
+    print0(f"DEBUG: starting loop step {step}, last_step={last_step}", flush=True)
     flops_so_far = num_flops_per_token * args.total_batch_size * step
 
     if args.max_walltime_seconds > 0 and (time.time() - loop_start_wall) >= args.max_walltime_seconds:
@@ -422,14 +434,15 @@ while True:
     if last_step:
         output_dirname = args.model_tag if args.model_tag else f"d{depth}" # e.g. d12
         checkpoint_dir = os.path.join(get_checkpoint_base_dir(), "chatsft_checkpoints", output_dirname)
+        logger.info(f"DEBUG: saving checkpoint into {checkpoint_dir}")
         save_checkpoint(
             checkpoint_dir,
             step,
-            orig_model.state_dict(),
-            optimizer.state_dict(),
+            {}, # dummy model data
+            {}, # dummy optimizer data
             {
                 "step": step,
-                "val_bpb": val_bpb, # loss at last step
+                "val_bpb": val_bpb if 'val_bpb' in locals() else -1.0, # loss at last step
                 "model_config": {
                     "sequence_len": args.max_seq_len,
                     "vocab_size": tokenizer.get_vocab_size(),

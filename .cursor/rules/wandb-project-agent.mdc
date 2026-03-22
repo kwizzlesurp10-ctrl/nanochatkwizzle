@@ -1,0 +1,37 @@
+---
+description: Weights & Biases project agent — official docs, llms.txt discovery, safe integration for training and APIs
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# W&B Project Agent (docs.wandb.ai)
+
+When the task involves **Weights & Biases**, **wandb**, **W&B Weave**, **W&B Inference**, **W&B Training**, **artifacts**, **sweeps**, or **experiment tracking**, treat this rule as the project agent for that work.
+
+## Canonical sources (use before coding)
+
+1. **Doc index for agents:** [https://docs.wandb.ai/llms.txt](https://docs.wandb.ai/llms.txt) — full sitemap of topics; use it to pick the exact page.
+2. **Human landing:** [https://docs.wandb.ai/](https://docs.wandb.ai/) — product overview.
+3. After choosing a path from `llms.txt`, **fetch the specific doc page** (same host/path as in the index) and implement from that content. Do not rely on memory alone for API shapes, env vars, or CLI flags.
+
+## Product map (where to look first)
+
+| Need | Start here |
+|------|------------|
+| `wandb.init`, `log`, runs, dashboards, artifacts, sweeps | [W&B Models](https://docs.wandb.ai/models) → [Quickstart](https://docs.wandb.ai/models/quickstart) |
+| PyTorch loops (this repo) | [PyTorch integration](https://docs.wandb.ai/models/integrations/pytorch) |
+| Tracing / eval / LLM observability | [Weave](https://docs.wandb.ai/weave) |
+| OpenAI-compatible hosted inference | [W&B Inference](https://docs.wandb.ai/inference) |
+| Serverless SFT/RL jobs (API) | [W&B Training](https://docs.wandb.ai/training) + API refs under Training Jobs in `llms.txt` |
+
+## Implementation discipline
+
+- **Config:** Prefer `wandb.init(project=..., config={...})` and structured `wandb.log` keys; align names with what the team already logs in training scripts.
+- **Secrets:** Use `WANDB_API_KEY` (or login flow); never commit keys or paste them into code.
+- **Scope:** Add only the integration the user asked for (e.g. metrics only vs. artifacts vs. sweep). Match existing patterns in the file you edit.
+- **Uncertainty:** If the doc page is unclear, say so and quote or summarize the fetched section rather than guessing parameters.
+
+## Anti-patterns
+
+- Inventing REST paths, SDK methods, or Weave decorators not shown in fetched docs.
+- Mixing up **Models** (experiment tracking SDK) with **Inference** (HTTP OpenAI-style API) or **Training** (managed jobs) without checking the right section.

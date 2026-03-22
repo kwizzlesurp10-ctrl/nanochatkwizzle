@@ -1,0 +1,11 @@
++ export OMP_NUM_THREADS=1
++ OMP_NUM_THREADS=1
++ export PYTORCH_ALLOC_CONF=expandable_segments:True
++ PYTORCH_ALLOC_CONF=expandable_segments:True
++ export PYTHONUNBUFFERED=1
++ PYTHONUNBUFFERED=1
++ export NANOCHAT_BASE_DIR=/home/keef/.cache/nanochat
++ NANOCHAT_BASE_DIR=/home/keef/.cache/nanochat
++ mkdir -p /home/keef/.cache/nanochat
++ rm -rf /home/keef/.cache/nanochat/tokenizer
++ rm -rf /home/keef/.cache/nanochat/base_checkpoints

@@ -193,6 +193,12 @@ class Engine:
         python_end = get_special("<|python_end|>")
         output_start = get_special("<|output_start|>")
         output_end = get_special("<|output_end|>")
+        thought_start = get_special("<|thought_start|>")
+        thought_end = get_special("<|thought_end|>")
+        action_start = get_special("<|action_start|>")
+        action_end = get_special("<|action_end|>")
+        observation_start = get_special("<|observation_start|>")
+        observation_end = get_special("<|observation_end|>")
         assistant_end = get_special("<|assistant_end|>") # if sampled, ends row
         bos = self.tokenizer.get_bos_token_id() # if sampled, ends row
 
@@ -233,7 +239,70 @@ class Engine:
         del kv_cache_prefill # no need to keep this memory around
 
         # 3) Initialize states for each sample
-        row_states = [RowState(tokens.copy()) for _ in range(num_samples)]
+        row_states = []
+        for _ in range(num_samples):
+            state = RowState(tokens.copy())
+            # Initialize browser specific state
+            state.in_action_block = False
+            state.action_tokens = []
+            
+            # Scan tokens for initial state (e.g. if we are in the middle of a block)
+            for t in tokens:
+                if t == python_start:
+                    state.in_python_block = True
+                    state.python_expr_tokens = []
+                elif t == python_end:
+                    state.in_python_block = False
+                elif state.in_python_block:
+                    state.python_expr_tokens.append(t)
+                
+                if t == action_start:
+                    state.in_action_block = True
+                    state.action_tokens = []
+                elif t == action_end:
+                    state.in_action_block = False
+                elif state.in_action_block:
+                    state.action_tokens.append(t)
+            
+            # If the prompt ended exactly with a tool-end token, we should probably 
+            # have triggered the tool. But the tool logic is triggered when hitting
+            # the end token. If it's already in 'tokens', we need to check if we 
+            # should trigger it NOW before starting generation.
+            if tokens and tokens[-1] == python_end:
+                # Trigger python tool
+                if state.python_expr_tokens:
+                    expr = self.tokenizer.decode(state.python_expr_tokens)
+                    result = use_calculator(expr)
+                    if result is not None:
+                        state.forced_tokens.append(output_start)
+                        state.forced_tokens.extend(self.tokenizer.encode(str(result)))
+                        state.forced_tokens.append(output_end)
+                state.python_expr_tokens = []
+            
+            if tokens and tokens[-1] == action_end:
+                # Trigger browser tool
+                if state.action_tokens:
+                    import asyncio
+                    import json
+                    from nanochat.browser_tool import execute_browser_tool
+                    action_json = self.tokenizer.decode(state.action_tokens)
+                    try:
+                        action_data = json.loads(action_json)
+                        try:
+                            loop = asyncio.get_event_loop()
+                        except RuntimeError:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                        
+                        result = loop.run_until_complete(execute_browser_tool(action_data["action"], action_data["params"]))
+                        state.forced_tokens.append(observation_start)
+                        state.forced_tokens.extend(self.tokenizer.encode(result))
+                        state.forced_tokens.append(observation_end)
+                    except Exception:
+                        pass
+                state.action_tokens = []
+                
+            row_states.append(state)
 
         # 4) Main generation loop
         num_generated = 0
@@ -262,7 +331,8 @@ class Engine:
                 # On <|assistant_end|> or <|bos|>, mark the row as completed
                 if next_token == assistant_end or next_token == bos:
                     state.completed = True
-                # Handle tool logic
+                
+                # Handle Python tool logic
                 if next_token == python_start:
                     state.in_python_block = True
                     state.python_expr_tokens = []
@@ -279,6 +349,41 @@ class Engine:
                     state.python_expr_tokens = []
                 elif state.in_python_block:
                     state.python_expr_tokens.append(next_token)
+                
+                # Handle Browser tool logic
+                if next_token == action_start:
+                    state.in_action_block = True
+                    state.action_tokens = []
+                elif next_token == action_end and state.in_action_block:
+                    state.in_action_block = False
+                    if state.action_tokens:
+                        import asyncio
+                        import json
+                        from nanochat.browser_tool import execute_browser_tool
+                        action_json = self.tokenizer.decode(state.action_tokens)
+                        try:
+                            action_data = json.loads(action_json)
+                            # execute_browser_tool is async, we need to run it in a sync context or use a loop
+                            # Since we are inside a generator, this is tricky. 
+                            # For simplicity, we'll use a new event loop or run_until_complete if possible.
+                            # But wait, generate() is NOT async.
+                            try:
+                                loop = asyncio.get_event_loop()
+                            except RuntimeError:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                            
+                            result = loop.run_until_complete(execute_browser_tool(action_data["action"], action_data["params"]))
+                            result_tokens = self.tokenizer.encode(result)
+                            state.forced_tokens.append(observation_start)
+                            state.forced_tokens.extend(result_tokens)
+                            state.forced_tokens.append(observation_end)
+                        except Exception as e:
+                            # print(f"Browser tool error: {e}")
+                            pass
+                    state.action_tokens = []
+                elif state.in_action_block:
+                    state.action_tokens.append(next_token)
 
             # Yield the token column
             yield token_column, token_masks

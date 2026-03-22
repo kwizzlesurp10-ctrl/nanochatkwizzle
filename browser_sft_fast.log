@@ -1,0 +1,34 @@
+COMPUTE_DTYPE: torch.float32 (auto-detected: no CUDA (CPU/MPS))
+wandb: [wandb.login()] Loaded credentials for https://api.wandb.ai from /home/keef/.netrc.
+wandb: Currently logged in as: kwizzlesurp10 (kwizzlesurp10-sevtech) to https://api.wandb.ai. Use `wandb login --relogin` to force relogin
+wandb: Tracking run with wandb version 0.25.1
+wandb: Run data is saved locally in /home/keef/nanochatkwizzle/wandb/run-20260321_195507-uqiktzp3
+wandb: Run `wandb offline` to turn off syncing.
+wandb: Syncing run browser_verify_sft_fast
+wandb: ⭐️ View project at https://wandb.ai/kwizzlesurp10-sevtech/nanochat-sft
+wandb: 🚀 View run at https://wandb.ai/kwizzlesurp10-sevtech/nanochat-sft/runs/uqiktzp3
+2026-03-21 19:55:10,162 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading model from /home/keef/.cache/nanochat/base_checkpoints/browser_verify with step 50
+2026-03-21 19:55:10,173 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Building model with config: {'sequence_len': 256, 'vocab_size': 32768, 'n_layer': 2, 'n_head': 1, 'n_kv_head': 1, 'n_embd': 64, 'dropout': 0.1, 'lora_rank': 0, 'lora_alpha': 16, 'window_pattern': 'L'}
+Attention: PyTorch SDPA (FA3 requires Hopper sm90+ with bf16).
+Using max_seq_len=256
+Using device_batch_size=4
+NOTE: --total-batch-size=1024 overrides pretrained value of 8192
+Inherited embedding_lr=0.006 from pretrained checkpoint
+Inherited unembedding_lr=0.00016 from pretrained checkpoint
+Inherited matrix_lr=0.0004 from pretrained checkpoint
+Tokens / micro-batch / rank: 4 x 256 = 1,024
+Tokens / micro-batch: 1,024
+Total batch size 1,024 => gradient accumulation steps: 1
+Scaling the LR for the AdamW parameters ∝1/√(64/768) = 3.464102
+2026-03-21 19:55:10,897 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading optimizer state from /home/keef/.cache/nanochat/base_checkpoints/browser_verify/optim_000050_rank0.pt
+Loaded optimizer state from pretrained checkpoint (momentum buffers only, LRs reset)
+Training mixture: 1,071,848 rows (MMLU x3, GSM8K x4)
+step 00001 (20.00%) | loss: nan | lrm: 1.00 | dt: 7733.60ms | tok/sec: 132 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00002 (30.00%) | loss: nan | lrm: 1.00 | dt: 191.22ms | tok/sec: 5,354 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00003 (40.00%) | loss: nan | lrm: 1.00 | dt: 193.79ms | tok/sec: 5,284 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00004 (50.00%) | loss: nan | lrm: 1.00 | dt: 228.91ms | tok/sec: 4,473 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00005 (60.00%) | loss: nan | lrm: 0.80 | dt: 203.29ms | tok/sec: 5,037 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00006 (70.00%) | loss: nan | lrm: 0.60 | dt: 212.00ms | tok/sec: 4,830 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00007 (80.00%) | loss: nan | lrm: 0.40 | dt: 196.96ms | tok/sec: 5,199 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00008 (90.00%) | loss: nan | lrm: 0.20 | dt: 213.77ms | tok/sec: 4,790 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00009 (100.00%) | loss: nan | lrm: 0.00 | dt: 213.33ms | tok/sec: 4,800 | mfu: 0.00 | epoch: 1 | total time: 0.00m
