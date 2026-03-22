@@ -434,7 +434,7 @@ while True:
     if last_step:
         output_dirname = args.model_tag if args.model_tag else f"d{depth}" # e.g. d12
         checkpoint_dir = os.path.join(get_checkpoint_base_dir(), "chatsft_checkpoints", output_dirname)
-        logger.info(f"DEBUG: saving checkpoint into {checkpoint_dir}")
+        print(f"DEBUG: saving checkpoint into {checkpoint_dir}", flush=True)
         save_checkpoint(
             checkpoint_dir,
             step,

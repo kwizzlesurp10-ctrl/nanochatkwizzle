@@ -342,6 +342,10 @@ class RustBPETokenizer:
                             add_tokens(output_end, 0)
                         else:
                             raise ValueError(f"Unknown part type: {part['type']}")
+                else:
+                    raise ValueError(
+                        f"Assistant message content must be str or list, got {type(content).__name__}"
+                    )
                 add_tokens(assistant_end, 1)
             elif role == "thought":
                 add_tokens(thought_start, 1)

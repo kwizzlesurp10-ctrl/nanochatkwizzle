@@ -1,6 +1,6 @@
 COMPUTE_DTYPE: torch.float32 (auto-detected: no CUDA (CPU/MPS))
-2026-03-21 21:25:22,639 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading model from /home/keef/.cache/nanochat/base_checkpoints/browser_verify with step 50
-2026-03-21 21:25:22,650 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Building model with config: {'sequence_len': 256, 'vocab_size': 32768, 'n_layer': 2, 'n_head': 1, 'n_kv_head': 1, 'n_embd': 64, 'dropout': 0.1, 'lora_rank': 0, 'lora_alpha': 16, 'window_pattern': 'L'}
+2026-03-21 21:30:33,284 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading model from /home/keef/.cache/nanochat/base_checkpoints/browser_verify with step 50
+2026-03-21 21:30:33,296 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Building model with config: {'sequence_len': 256, 'vocab_size': 32768, 'n_layer': 2, 'n_head': 1, 'n_kv_head': 1, 'n_embd': 64, 'dropout': 0.1, 'lora_rank': 0, 'lora_alpha': 16, 'window_pattern': 'L'}
 Attention: PyTorch SDPA (FA3 requires Hopper sm90+ with bf16).
 Using max_seq_len=256
 Using device_batch_size=4
@@ -12,17 +12,17 @@ Tokens / micro-batch / rank: 4 x 256 = 1,024
 Tokens / micro-batch: 1,024
 Total batch size 1,024 => gradient accumulation steps: 1
 Scaling the LR for the AdamW parameters ∝1/√(64/768) = 3.464102
-2026-03-21 21:25:22,697 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading optimizer state from /home/keef/.cache/nanochat/base_checkpoints/browser_verify/optim_000050_rank0.pt
+2026-03-21 21:30:33,343 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading optimizer state from /home/keef/.cache/nanochat/base_checkpoints/browser_verify/optim_000050_rank0.pt
 Loaded optimizer state from pretrained checkpoint (momentum buffers only, LRs reset)
 Training mixture: 1,071,848 rows (MMLU x3, GSM8K x4)
 DEBUG: starting loop step 0, last_step=False
-step 00001 (20.00%) | loss: nan | lrm: 1.00 | dt: 3208.54ms | tok/sec: 319 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00001 (20.00%) | loss: nan | lrm: 1.00 | dt: 3108.89ms | tok/sec: 329 | mfu: 0.00 | epoch: 1 | total time: 0.00m
 DEBUG: starting loop step 1, last_step=False
-step 00002 (40.00%) | loss: nan | lrm: 1.00 | dt: 271.06ms | tok/sec: 3,777 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00002 (40.00%) | loss: nan | lrm: 1.00 | dt: 278.33ms | tok/sec: 3,679 | mfu: 0.00 | epoch: 1 | total time: 0.00m
 DEBUG: starting loop step 2, last_step=False
-step 00003 (60.00%) | loss: nan | lrm: 0.80 | dt: 302.21ms | tok/sec: 3,388 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00003 (60.00%) | loss: nan | lrm: 0.80 | dt: 345.10ms | tok/sec: 2,967 | mfu: 0.00 | epoch: 1 | total time: 0.00m
 DEBUG: starting loop step 3, last_step=False
-step 00004 (80.00%) | loss: nan | lrm: 0.40 | dt: 295.48ms | tok/sec: 3,465 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00004 (80.00%) | loss: nan | lrm: 0.40 | dt: 362.60ms | tok/sec: 2,824 | mfu: 0.00 | epoch: 1 | total time: 0.00m
 DEBUG: starting loop step 4, last_step=False
-step 00005 (100.00%) | loss: nan | lrm: 0.00 | dt: 253.19ms | tok/sec: 4,044 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00005 (100.00%) | loss: nan | lrm: 0.00 | dt: 280.36ms | tok/sec: 3,652 | mfu: 0.00 | epoch: 1 | total time: 0.00m
 DEBUG: starting loop step 5, last_step=True
