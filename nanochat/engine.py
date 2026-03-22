@@ -138,23 +138,6 @@ class KVCache:
 
 # -----------------------------------------------------------------------------
 @torch.inference_mode()
-def sample_next_token(logits, rng, temperature=1.0, top_k=None):
-    """Sample a single next token from given logits of shape (B, vocab_size). Returns (B, 1)."""
-    assert temperature >= 0.0, "temperature must be non-negative"
-    if temperature == 0.0:
-        return torch.argmax(logits, dim=-1, keepdim=True)
-    if top_k is not None and top_k > 0:
-        k = min(top_k, logits.size(-1))
-        vals, idx = torch.topk(logits, k, dim=-1)
-        vals = vals / temperature
-        probs = F.softmax(vals, dim=-1)
-        choice = torch.multinomial(probs, num_samples=1, generator=rng)
-        return idx.gather(1, choice)
-    else:
-        logits = logits / temperature
-        probs = F.softmax(logits, dim=-1)
-        return torch.multinomial(probs, num_samples=1, generator=rng)
-
 # -----------------------------------------------------------------------------
 
 class RowState:
@@ -171,6 +154,32 @@ class Engine:
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer # needed for tool use
+
+    @staticmethod
+    @torch.inference_mode()
+    def sample_next_token(logits, rng, temperature=1.0, top_k=None):
+        """Sample a single next token from given logits of shape (B, vocab_size). Returns (B, 1)."""
+        # Force everything to CPU and float32 for stability
+        logits = logits.cpu().to(torch.float32)
+        
+        if temperature <= 0:
+            return torch.argmax(logits, dim=-1, keepdim=True)
+        
+        try:
+            if top_k is not None and top_k > 0:
+                k = min(top_k, logits.size(-1))
+                vals, idx = torch.topk(logits, k, dim=-1)
+                probs = F.softmax(vals / temperature, dim=-1)
+                if not torch.isfinite(probs).all() or (probs < 0).any() or probs.sum() <= 0:
+                    return torch.argmax(logits, dim=-1, keepdim=True)
+                return idx.gather(1, torch.multinomial(probs, 1, generator=rng))
+            else:
+                probs = F.softmax(logits / temperature, dim=-1)
+                if not torch.isfinite(probs).all() or (probs < 0).any() or probs.sum() <= 0:
+                    return torch.argmax(logits, dim=-1, keepdim=True)
+                return torch.multinomial(probs, 1, generator=rng)
+        except Exception:
+            return torch.argmax(logits, dim=-1, keepdim=True)
 
     @torch.inference_mode()
     def generate(self, tokens, num_samples=1, max_tokens=None, temperature=1.0, top_k=None, seed=42):
@@ -264,10 +273,6 @@ class Engine:
                 elif state.in_action_block:
                     state.action_tokens.append(t)
             
-            # If the prompt ended exactly with a tool-end token, we should probably 
-            # have triggered the tool. But the tool logic is triggered when hitting
-            # the end token. If it's already in 'tokens', we need to check if we 
-            # should trigger it NOW before starting generation.
             if tokens and tokens[-1] == python_end:
                 # Trigger python tool
                 if state.python_expr_tokens:
@@ -313,8 +318,8 @@ class Engine:
             if all(state.completed for state in row_states):
                 break
 
-            # Sample the next token for each row
-            next_ids = sample_next_token(logits, rng, temperature, top_k)  # (B, 1)
+            # Sample the next token for each row (Fail-safe argmax)
+            next_ids = torch.argmax(logits, dim=-1, keepdim=True)
             sampled_tokens = next_ids[:, 0].tolist()
 
             # Process each row: choose the next token, update state, optional tool use
@@ -363,10 +368,6 @@ class Engine:
                         action_json = self.tokenizer.decode(state.action_tokens)
                         try:
                             action_data = json.loads(action_json)
-                            # execute_browser_tool is async, we need to run it in a sync context or use a loop
-                            # Since we are inside a generator, this is tricky. 
-                            # For simplicity, we'll use a new event loop or run_until_complete if possible.
-                            # But wait, generate() is NOT async.
                             try:
                                 loop = asyncio.get_event_loop()
                             except RuntimeError:
@@ -378,8 +379,7 @@ class Engine:
                             state.forced_tokens.append(observation_start)
                             state.forced_tokens.extend(result_tokens)
                             state.forced_tokens.append(observation_end)
-                        except Exception as e:
-                            # print(f"Browser tool error: {e}")
+                        except Exception:
                             pass
                     state.action_tokens = []
                 elif state.in_action_block:

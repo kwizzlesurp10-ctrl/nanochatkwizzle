@@ -536,8 +536,16 @@ class GPT(nn.Module):
                 v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 logits[logits < v[:, [-1]]] = -float('Inf')
             if temperature > 0:
-                logits = logits / temperature
+                logits = logits / (temperature + 1e-8)
                 probs = F.softmax(logits, dim=-1)
+                # Safety check: handle NaN/Inf in probabilities
+                if torch.isnan(probs).any() or torch.isinf(probs).any():
+                    probs = torch.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
+                    if probs.sum() <= 0:
+                        probs.fill_(1.0 / probs.size(-1))
+                    else:
+                        probs = probs / probs.sum(dim=-1, keepdim=True)
+                
                 next_ids = torch.multinomial(probs, num_samples=1, generator=rng)
             else:
                 next_ids = torch.argmax(logits, dim=-1, keepdim=True)

@@ -1,0 +1,62 @@
+COMPUTE_DTYPE: torch.float32 (auto-detected: no CUDA (CPU/MPS))
+2026-03-21 21:53:05,922 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading model from /home/keef/.cache/nanochat/base_checkpoints/browser_verify with step 50
+2026-03-21 21:53:05,933 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Building model with config: {'sequence_len': 256, 'vocab_size': 32768, 'n_layer': 2, 'n_head': 1, 'n_kv_head': 1, 'n_embd': 64, 'dropout': 0.1, 'lora_rank': 0, 'lora_alpha': 16, 'window_pattern': 'L'}
+Attention: PyTorch SDPA (FA3 requires Hopper sm90+ with bf16).
+Using max_seq_len=256
+Using device_batch_size=4
+NOTE: --total-batch-size=1024 overrides pretrained value of 8192
+Inherited embedding_lr=0.006 from pretrained checkpoint
+Inherited unembedding_lr=0.00016 from pretrained checkpoint
+Inherited matrix_lr=0.0004 from pretrained checkpoint
+Tokens / micro-batch / rank: 4 x 256 = 1,024
+Tokens / micro-batch: 1,024
+Total batch size 1,024 => gradient accumulation steps: 1
+Scaling the LR for the AdamW parameters ∝1/√(64/768) = 3.464102
+2026-03-21 21:53:05,980 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Loading optimizer state from /home/keef/.cache/nanochat/base_checkpoints/browser_verify/optim_000050_rank0.pt
+Loaded optimizer state from pretrained checkpoint (momentum buffers only, LRs reset)
+--------------------------------------------------------------------------------
+Warning: File /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl does not exist
+HINT (Oct 21 2025)
+If you recently did a git pull and suddenly see this, it might be due to the new addition of identity conversations
+See this discussion for more details: https://github.com/karpathy/nanochat/discussions/139
+Quick fix: simply run the following command to download the file and you're done:
+curl -L -o /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+Warning: File /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl does not exist
+HINT (Oct 21 2025)
+If you recently did a git pull and suddenly see this, it might be due to the new addition of identity conversations
+See this discussion for more details: https://github.com/karpathy/nanochat/discussions/139
+Quick fix: simply run the following command to download the file and you're done:
+curl -L -o /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+Warning: File /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl does not exist
+HINT (Oct 21 2025)
+If you recently did a git pull and suddenly see this, it might be due to the new addition of identity conversations
+See this discussion for more details: https://github.com/karpathy/nanochat/discussions/139
+Quick fix: simply run the following command to download the file and you're done:
+curl -L -o /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+Warning: File /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl does not exist
+HINT (Oct 21 2025)
+If you recently did a git pull and suddenly see this, it might be due to the new addition of identity conversations
+See this discussion for more details: https://github.com/karpathy/nanochat/discussions/139
+Quick fix: simply run the following command to download the file and you're done:
+curl -L -o /home/keef/nanochatkwizzle/scripts/../dev/browser_data_dummy.jsonl https://karpathy-public.s3.us-west-2.amazonaws.com/identity_conversations.jsonl
+--------------------------------------------------------------------------------
+Training mixture: 1,071,840 rows (MMLU x3, GSM8K x4)
+step 00001 (20.00%) | loss: nan | lrm: 1.00 | dt: 2894.52ms | tok/sec: 353 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00002 (40.00%) | loss: nan | lrm: 1.00 | dt: 316.83ms | tok/sec: 3,232 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00003 (60.00%) | loss: nan | lrm: 0.80 | dt: 277.15ms | tok/sec: 3,694 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00004 (80.00%) | loss: nan | lrm: 0.40 | dt: 253.74ms | tok/sec: 4,035 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+step 00005 (100.00%) | loss: nan | lrm: 0.00 | dt: 263.54ms | tok/sec: 3,885 | mfu: 0.00 | epoch: 1 | total time: 0.00m
+Step 00005 | Validation bpb: nan
+2026-03-21 21:53:18,688 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Saved model parameters to: /home/keef/.cache/nanochat/chatsft_checkpoints/browser_verify/model_000005.pt
+2026-03-21 21:53:18,688 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Saved metadata to: /home/keef/.cache/nanochat/chatsft_checkpoints/browser_verify/meta_000005.json
+2026-03-21 21:53:18,689 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Copied tokenizer to: /home/keef/.cache/nanochat/chatsft_checkpoints/browser_verify/tokenizer
+2026-03-21 21:53:18,712 - nanochat.checkpoint_manager - [32m[1mINFO[0m - Saved optimizer state to: /home/keef/.cache/nanochat/chatsft_checkpoints/browser_verify/optim_000005_rank0.pt
+Peak memory usage: 0.00MiB
+Total training time: 0.00m
+Minimum validation bpb: inf

@@ -66,6 +66,9 @@ from pydantic import BaseModel
 from typing import List, Optional, AsyncGenerator
 from dataclasses import dataclass
 
+import nanochat
+logger.info(f"DEBUG: nanochat imported from {nanochat.__file__}")
+
 from nanochat.common import compute_init, autodetect_device_type
 from nanochat.netutil import assert_tcp_port_available
 from nanochat.checkpoint_manager import load_model
@@ -95,8 +98,8 @@ parser.add_argument('--backend', type=str, default='ollama', choices=['ollama', 
 parser.add_argument('--ollama-chat-model', type=str, default=os.environ.get('OLLAMA_CHAT_MODEL', 'llama3.2'), help='Ollama model name when --backend ollama')
 parser.add_argument('-n', '--num-gpus', type=int, default=1, help='Number of GPUs to use (nanochat backend only; default: 1)')
 parser.add_argument('-i', '--source', type=str, default="sft", help="Source of the model: sft|rl (nanochat backend only)")
-parser.add_argument('-t', '--temperature', type=float, default=0.8, help='Default temperature for generation')
-parser.add_argument('-k', '--top-k', type=int, default=50, help='Default top-k sampling parameter')
+parser.add_argument('-t', '--temperature', type=float, default=1.0, help='Default temperature for generation')
+parser.add_argument('-k', '--top-k', type=int, default=100, help='Default top-k sampling parameter')
 parser.add_argument('-m', '--max-tokens', type=int, default=512, help='Default max tokens for generation')
 parser.add_argument('-g', '--model-tag', type=str, default=None, help='Model tag to load (nanochat backend)')
 parser.add_argument('-s', '--step', type=int, default=None, help='Step to load (nanochat backend)')
@@ -115,7 +118,7 @@ parser.add_argument('--ollama-keep-alive', type=str, default='5m', help='Ollama 
 parser.add_argument('--ollama-num-ctx', type=int, default=4096, help='Ollama num_ctx parameter')
 parser.add_argument('--rag-embed-model', type=str, default='nomic-embed-text', help='Ollama embedding model name')
 parser.add_argument('--rag-chunk-size', type=int, default=800, help='Max characters per chunk (corpus mode)')
-parser.add_argument('--rag-k', type=int, default=3, help='Number of documents to retrieve for RAG')
+parser.add_argument('--rag-k', type=int, default=5, help='Number of documents to retrieve for RAG (Target: 90% retrieval accuracy)')
 parser.add_argument(
     '--database-url',
     type=str,
@@ -134,8 +137,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-device_type = autodetect_device_type() if args.device_type == "" else args.device_type
-ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init(device_type)
+# RAG System Prompt
+RAG_SYSTEM_PROMPT = """You are a highly accurate assistant with web browsing capabilities. Use the following context snippets retrieved from our Chroma DB to answer the user's request. 
+
+GUIDELINES:
+1. ONLY use the provided context to answer if possible. 
+2. If the context is insufficient or irrelevant, explicitly state: "Based on the retrieved documents, I do not have enough information to answer this accurately." and suggest that they can contribute more information using the /save_to_training endpoint.
+3. You can also use your browser tool to find more information. To use the browser, think about your plan inside <|thought_start|> and <|thought_end|>, then emit an action inside <|action_start|> and <|action_end|>.
+4. Maintain a professional and concise tone.
+5. Do not mention the context unless it helps the user understand the answer.
+
+### RETRIEVED CONTEXT:
+{context}"""
+
+if not torch.distributed.is_initialized():
+    device_type = autodetect_device_type() if args.device_type == "" else args.device_type
+    ddp, ddp_rank, ddp_local_rank, ddp_world_size, device = compute_init(device_type)
+else:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    ddp_rank = torch.distributed.get_rank()
+    ddp_world_size = torch.distributed.get_world_size()
 
 
 async def _ollama_embedding(prompt: str, model: str, base_url: str, timeout: float = 120.0) -> list:
@@ -712,10 +733,11 @@ async def root():
     ui_html_path = os.path.join("nanochat", "ui.html")
     with open(ui_html_path, "r", encoding="utf-8") as f:
         html_content = f.read()
-    # Replace the API_URL to use the same origin
+    # Replace the API_URL to use the actual host and port the server is running on
+    # In a local setup, window.location.origin is usually sufficient.
     html_content = html_content.replace(
-        "const API_URL = `http://${window.location.hostname}:8000`;",
-        "const API_URL = '';"
+        "const API_URL = '';",
+        "const API_URL = window.location.origin;"
     )
     return HTMLResponse(content=html_content)
 
@@ -763,6 +785,11 @@ async def generate_stream(
         seed=random.randint(0, 2**31 - 1)
     ):
         token = token_column[0]
+        
+        # Safety check: if model produces invalid tokens
+        if not (0 <= token < worker.tokenizer.get_vocab_size()):
+            logger.warning(f"Model produced invalid token {token}, stopping generation.")
+            break
 
         if token in stop_on_tool:
             break
@@ -903,7 +930,7 @@ async def chat_completions(request: ChatRequest):
         ollama_messages = []
         if rag_context:
             ollama_messages.append(
-                {"role": "system", "content": "Use the following context when answering the user:\n\n" + rag_context}
+                {"role": "system", "content": RAG_SYSTEM_PROMPT.format(context=rag_context)}
             )
         for message in modified_messages:
             if message.role in ("user", "assistant", "system"):
@@ -969,10 +996,10 @@ async def chat_completions(request: ChatRequest):
         # Prepend RAG context if found
         if rag_context:
             conversation_tokens.append(user_start)
-            conversation_tokens.extend(worker.tokenizer.encode("Use this context to answer the following question: " + rag_context))
+            conversation_tokens.extend(worker.tokenizer.encode(RAG_SYSTEM_PROMPT.format(context=rag_context)))
             conversation_tokens.append(user_end)
             conversation_tokens.append(assistant_start)
-            conversation_tokens.extend(worker.tokenizer.encode("Understood. I will use the provided Basecamp context."))
+            conversation_tokens.extend(worker.tokenizer.encode("Understood. I will use the provided context from Chroma DB."))
             conversation_tokens.append(assistant_end)
 
         system_parts = []

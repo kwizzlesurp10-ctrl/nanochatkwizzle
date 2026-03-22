@@ -18,10 +18,6 @@ os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
 import wandb
 import torch
 from nanochat.common import compute_init, compute_cleanup, print0, DummyWandb, get_base_dir, get_checkpoint_base_dir, autodetect_device_type, get_peak_flops, COMPUTE_DTYPE, COMPUTE_DTYPE_REASON, is_ddp_initialized, resolve_wandb_init_kwargs, setup_default_logging
-
-# setup logging
-setup_default_logging()
-logger = logging.getLogger(__name__)
 from nanochat.tokenizer import get_token_bytes
 from nanochat.checkpoint_manager import save_checkpoint, load_model, load_optimizer_state
 from nanochat.loss_eval import evaluate_bpb
@@ -36,6 +32,10 @@ from tasks.mmlu import MMLU
 from tasks.smoltalk import SmolTalk
 from tasks.customjson import CustomJSON
 from tasks.spellingbee import SimpleSpelling, SpellingBee
+
+# setup logging
+setup_default_logging()
+logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 # CLI arguments
@@ -365,7 +365,6 @@ total_training_time = 0 # total wall-clock time of training
 step = 0
 loop_start_wall = time.time()
 while True:
-    print0(f"DEBUG: starting loop step {step}, last_step={last_step}", flush=True)
     flops_so_far = num_flops_per_token * args.total_batch_size * step
 
     if args.max_walltime_seconds > 0 and (time.time() - loop_start_wall) >= args.max_walltime_seconds:
@@ -434,12 +433,11 @@ while True:
     if last_step:
         output_dirname = args.model_tag if args.model_tag else f"d{depth}" # e.g. d12
         checkpoint_dir = os.path.join(get_checkpoint_base_dir(), "chatsft_checkpoints", output_dirname)
-        print(f"DEBUG: saving checkpoint into {checkpoint_dir}", flush=True)
         save_checkpoint(
             checkpoint_dir,
             step,
-            {}, # dummy model data
-            {}, # dummy optimizer data
+            orig_model.state_dict(),
+            optimizer.state_dict(),
             {
                 "step": step,
                 "val_bpb": val_bpb if 'val_bpb' in locals() else -1.0, # loss at last step

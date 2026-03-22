@@ -106,3 +106,9 @@
 {"event": "metric", "session_id": "sess_wmkj5acru5", "metric_name": "total_tokens", "metric_value": 125, "ab_group": "A", "model": "llama3.2", "timestamp": "2026-03-21T18:20:52.797891"}
 {"event": "metric", "session_id": "sess_wmkj5acru5", "metric_name": "generation_time", "metric_value": 1.6578781604766846, "ab_group": "A", "model": "llama3.2", "timestamp": "2026-03-21T18:20:52.797904"}
 {"event": "metric", "session_id": "sess_wmkj5acru5", "metric_name": "client_perceived_latency", "metric_value": 1714.1000000089407, "ab_group": "A", "model": "llama3.2", "timestamp": "2026-03-21T18:20:52.799801"}
+{"event": "metric", "session_id": "sess_xsjtb4s3q4f", "metric_name": "tokens_per_second", "metric_value": 0.0, "ab_group": "A", "model": "browser_verify", "timestamp": "2026-03-22T03:08:15.505481+00:00"}
+{"event": "metric", "session_id": "sess_xsjtb4s3q4f", "metric_name": "total_tokens", "metric_value": 0.0, "ab_group": "A", "model": "browser_verify", "timestamp": "2026-03-22T03:08:15.505481+00:00"}
+{"event": "metric", "session_id": "sess_xsjtb4s3q4f", "metric_name": "generation_time", "metric_value": 0.003736734390258789, "ab_group": "A", "model": "browser_verify", "timestamp": "2026-03-22T03:08:15.505481+00:00"}
+{"event": "metric", "session_id": "sess_xsjtb4s3q4f", "metric_name": "tokens_per_second", "metric_value": 0.0, "ab_group": "A", "model": "browser_verify", "timestamp": "2026-03-22T03:08:19.078721+00:00"}
+{"event": "metric", "session_id": "sess_xsjtb4s3q4f", "metric_name": "total_tokens", "metric_value": 0.0, "ab_group": "A", "model": "browser_verify", "timestamp": "2026-03-22T03:08:19.078721+00:00"}
+{"event": "metric", "session_id": "sess_xsjtb4s3q4f", "metric_name": "generation_time", "metric_value": 0.012493610382080078, "ab_group": "A", "model": "browser_verify", "timestamp": "2026-03-22T03:08:19.078721+00:00"}

@@ -49,7 +49,6 @@ def _patch_missing_keys(model_data, model_config):
         log0(f"Patching missing x0_lambdas in model data to 0.0")
 
 def save_checkpoint(checkpoint_dir, step, model_data, optimizer_data, meta_data, rank=0):
-    print(f"DEBUG: save_checkpoint called for rank {rank} into {os.path.abspath(checkpoint_dir)}", flush=True)
     if rank == 0:
         os.makedirs(checkpoint_dir, exist_ok=True)
         # Save the model state parameters
