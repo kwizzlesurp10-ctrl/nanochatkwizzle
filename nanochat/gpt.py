@@ -1,3 +1,4 @@
+print(f"DEBUG: DEFINITIVE nanochat/gpt.py LOADING FROM {__file__}", flush=True)
 """
 GPT model (rewrite, a lot simpler)
 Notable features:
@@ -18,6 +19,7 @@ import math
 
 import torch
 import torch.nn as nn
+print(f"DEBUG: nanochat.gpt module loaded from {__file__}", flush=True)
 import torch.nn.functional as F
 
 from nanochat.common import get_dist_info, print0, COMPUTE_DTYPE
@@ -448,6 +450,7 @@ class GPT(nn.Module):
         return optimizer
 
     def forward(self, idx, targets=None, kv_cache=None, loss_reduction='mean'):
+        print("FORWARD PASS STARTING", flush=True)
         B, T = idx.size()
 
         # Grab the rotary embeddings for the current sequence length (they are of shape (1, seq_len, 1, head_dim/2))
@@ -522,6 +525,8 @@ class GPT(nn.Module):
         - batch size is 1
         - ids and the yielded tokens are simple Python lists and ints
         """
+        print(f"DEBUG: GPT globals sample_next_token: {globals().get('sample_next_token')}", flush=True)
+        print("GPT generate starting...", flush=True)
         assert isinstance(tokens, list)
         device = self.get_device()
         rng = None
@@ -537,16 +542,21 @@ class GPT(nn.Module):
                 logits[logits < v[:, [-1]]] = -float('Inf')
             if temperature > 0:
                 logits = logits / (temperature + 1e-8)
-                probs = F.softmax(logits, dim=-1)
-                # Safety check: handle NaN/Inf in probabilities
-                if torch.isnan(probs).any() or torch.isinf(probs).any():
-                    probs = torch.nan_to_num(probs, nan=0.0, posinf=0.0, neginf=0.0)
-                    if probs.sum() <= 0:
-                        probs.fill_(1.0 / probs.size(-1))
-                    else:
-                        probs = probs / probs.sum(dim=-1, keepdim=True)
+                # Detach, move to CPU, and cast to float32 for sampling stability
+                logits_clean = logits.detach().cpu().to(torch.float32)
+                probs = F.softmax(logits_clean, dim=-1)
                 
-                next_ids = torch.multinomial(probs, num_samples=1, generator=rng)
+                # Safety check: handle NaN/Inf/Non-finite in probabilities
+                if not torch.isfinite(probs).all() or (probs < 0).any() or probs.sum() <= 0:
+                    next_ids = torch.argmax(logits_clean, dim=-1, keepdim=True)
+                else:
+                    try:
+                        next_ids = torch.multinomial(probs, num_samples=1, generator=rng)
+                    except RuntimeError:
+                        next_ids = torch.argmax(logits_clean, dim=-1, keepdim=True)
+                
+                # Move back to model device
+                next_ids = next_ids.to(device)
             else:
                 next_ids = torch.argmax(logits, dim=-1, keepdim=True)
             ids = torch.cat((ids, next_ids), dim=1)

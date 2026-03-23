@@ -1,3 +1,4 @@
+print(f"DEBUG: nanochat/common.py executed from {__file__}", flush=True)
 """
 Common utilities for nanochat.
 """

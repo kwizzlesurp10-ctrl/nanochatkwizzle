@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+import os
+import sys
+sys.path.insert(0, os.getcwd())
+import emergency_patch_v2
+
 """
 Unified web chat server - serves both UI and API from a single FastAPI instance.
 
@@ -476,6 +481,8 @@ def validate_chat_request(request: ChatRequest):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load Ollama-backed chat (default) or local nanochat checkpoints."""
+    logger.info("DEBUG: NanoChat lifespan starting...")
+    logger.info(f"DEBUG: sys.path = {sys.path}")
     app.state.backend = args.backend
     app.state.ollama_chat_model = args.ollama_chat_model
     app.state.worker_pool = None
@@ -1129,6 +1136,8 @@ async def stats():
     }
 
 if __name__ == "__main__":
+    import emergency_patch
+    print("STARTING SERVER MAIN", flush=True)
     import uvicorn
     print("Starting NanoChat Web Server")
     print(f"Backend: {args.backend}")
